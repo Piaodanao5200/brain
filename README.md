@@ -1,0 +1,78 @@
+# brain — 本地知识库与记忆体
+
+一个放在本机、可被任何 agent 读写的记忆系统。**纯 Markdown 与 SQLite，零云依赖，零 API 成本。**
+
+- `memory/` — **记忆体**：用户长期定过的事（决策 / 事实 / 坑 / 待办），十几条，KB 级
+- `library/` — **知识库**：外部资料原文（PDF / 扫描件 / 图片 / 视频），可到 GB，按需查
+
+一句话区分：**记忆体是「应该一直记得的事」，知识库是「需要时去翻的资料」。**
+详细的接入与使用规则在 [`AGENTS.md`](./AGENTS.md)（给 agent 看）和 [`memory/README.md`](./memory/README.md)（给自己看）。
+
+## 目录
+
+```
+brain/
+├─ AGENTS.md                 给任何 agent 的接入说明（先读这个）
+├─ 更新.cmd                  双击：同步 inbox → 重建索引 → 刷阅读页
+├─ 打开看板.cmd              双击：打开阅读页
+│
+├─ memory/                   记忆体
+│  ├─ vault/                 ★ 唯一真源，一条记忆一个 .md
+│  │  ├─ 00-index/           RULES.md（写入规则）、INDEX.md（自动索引）
+│  │  ├─ 10-knowledge/       可复用的通用结论
+│  │  ├─ 20-memory/          decisions / facts / pitfalls / todos / notes
+│  │  ├─ 30-sessions/        一次工作的流水
+│  │  └─ 90-archive/         过期但保留
+│  ├─ bin/kb.mjs             命令行：bootstrap / search / new / supersede / refresh
+│  ├─ bin/render.mjs         生成阅读页
+│  ├─ server/mcp-server.mjs  MCP 服务（6 个工具，stdio 与 HTTP 双模）
+│  └─ hooks/                 WorkBuddy 会话启动时自动注入相关记忆
+│
+└─ library/                  知识库
+   ├─ inbox/                 ★ 投递口，丢文件进来
+   ├─ sources/               原件归档（pdf / md / image / audio / video）
+   ├─ bin/kb.py              命令行：add / sync / search / export-md
+   └─ reading/               人读投影（生成物）
+```
+
+## 日常用法
+
+```bash
+# 一条命令更新全部（同步 inbox → 导出投影 → 重建索引 → 刷阅读页）
+cd memory && node bin/kb.mjs refresh
+```
+
+或者直接双击 `更新.cmd`。
+
+| 想做什么 | 怎么做 |
+|---|---|
+| 记一件事 | 告诉 agent，或 `node bin/kb.mjs new --type decision --title "…" --body "…"` |
+| 查记忆 | `node bin/kb.mjs search "关键词"` |
+| 放资料 | 丢进 `library/inbox/`，然后 `更新.cmd` |
+| 查资料原文 | `python library/bin/kb.py search "关键词"`（带出处页码） |
+| 看全部 | 双击 `打开看板.cmd` |
+
+## 设计取舍
+
+- **Markdown 是唯一真源**，没有向量库。检索用 BM25 + 中文二元切分，本地毫秒级，不需 API key。
+- **不物理删除**。事实变更走 `supersede`，旧条目保留为 `superseded` 并指向新条目——「我们以前相信什么」本身是信息。
+- **记忆的权威低于代码**。记忆与代码冲突时看代码，然后修掉那条记忆。
+- **真源入仓，派生物不入仓**。`store.db`（可索引重建）、`reading/`（可重新导出）、阅读页 HTML（可重新渲染）都在 `.gitignore` 里。
+
+## 克隆到新机器后
+
+```bash
+git clone <repo> brain && cd brain
+
+# 1. 重建知识库索引（如果 sources/ 里有原件）
+cd library && python bin/kb.py rebuild && cd ..
+
+# 2. 重建记忆索引并生成阅读页
+cd memory && node bin/kb.mjs refresh
+```
+
+依赖：Node 18+（记忆体零依赖）、Python 3.10+（知识库需要 `pymupdf`、`rapidocr-onnxruntime` 等，见 `library/README.md`）。
+
+## 注意
+
+这个仓库可能包含个人工作习惯与环境信息（端口、路径、偏好）。**请保持私有。**

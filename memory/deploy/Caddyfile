@@ -1,0 +1,42 @@
+# Caddy 反代配置：自动 HTTPS + 透传 MCP 的 POST
+{$KB_DOMAIN:localhost} {
+	encode zstd gzip
+
+	# MCP 端点：必须是 POST 直达后端，不要缓冲
+	handle /mcp* {
+		reverse_proxy kb:8787 {
+			flush_interval -1
+			header_up X-Real-IP {remote_host}
+		}
+	}
+
+	# 浏览器可读的索引视图与检索页，方便手机上直接看
+	handle /index* {
+		reverse_proxy kb:8787
+	}
+	handle /search* {
+		reverse_proxy kb:8787
+	}
+	handle /health {
+		reverse_proxy kb:8787
+	}
+
+	# 其余的对外不暴露
+	handle {
+		respond "kb-memory: /mcp (POST), /index, /search?q=, /health" 200
+	}
+
+	header {
+		Strict-Transport-Security "max-age=31536000;"
+		X-Content-Type-Options "nosniff"
+		-Server
+	}
+
+	log {
+		output file /data/access.log {
+			roll_size 10MiB
+			roll_keep 5
+		}
+		format json
+	}
+}

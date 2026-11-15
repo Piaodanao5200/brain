@@ -1,0 +1,9 @@
+# 统一换行，避免 Windows/Linux 之间互相污染
+* text=auto eol=lf
+
+# Windows 批处理必须是 CRLF，否则 cmd 解释器可能出错
+*.cmd text eol=crlf
+*.bat text eol=crlf
+
+# shell 脚本必须是 LF，CRLF 会让 bash 报 "bad interpreter"
+*.sh text eol=lf

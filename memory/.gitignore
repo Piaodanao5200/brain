@@ -1,0 +1,12 @@
+node_modules/
+.env
+deploy/.env
+*.log
+_check*.png
+_crop*.png
+.DS_Store
+Thumbs.db
+
+# 本地临时文件
+tmp/
+.cache/

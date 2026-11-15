@@ -1,0 +1,42 @@
+services:
+  kb:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    image: kb-memory:1.0.0
+    container_name: kb-memory
+    restart: unless-stopped
+    environment:
+      PORT: 8787
+      KB_VAULT: /app/vault
+      # 生产必须设置；留空则完全不鉴权，只能在内网跑
+      KB_TOKEN: ${KB_TOKEN:?请在 .env 里设置 KB_TOKEN}
+      KB_READONLY: ${KB_READONLY:-0}
+      KB_CORS_ORIGIN: ${KB_CORS_ORIGIN:-*}
+    volumes:
+      # vault 挂出来，agent 写入直接落到宿主机，git 能管、Obsidian 能看
+      - ../vault:/app/vault
+    ports:
+      # 只监听本机，由反代对外；如需直接暴露改成 "8787:8787"
+      - "127.0.0.1:8787:8787"
+
+  # HTTPS 终结。域名解析到这台机器后，Caddy 自动申请证书
+  caddy:
+    image: caddy:2-alpine
+    container_name: kb-caddy
+    restart: unless-stopped
+    depends_on:
+      - kb
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      KB_DOMAIN: ${KB_DOMAIN:-localhost}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  caddy_data:
+  caddy_config:

@@ -1,0 +1,21 @@
+{
+  "name": "kb-memory",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "本地知识库与记忆体：Markdown 真源 + 零依赖 MCP 服务器，任何 agent 可读写",
+  "bin": {
+    "kb": "./bin/kb.mjs"
+  },
+  "scripts": {
+    "start": "node server/mcp-server.mjs",
+    "stdio": "node server/mcp-server.mjs --stdio",
+    "kb": "node bin/kb.mjs",
+    "index": "node bin/kb.mjs index",
+    "lint": "node scripts/drift-check.mjs",
+    "compact": "node scripts/compact.mjs"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

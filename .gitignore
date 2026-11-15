@@ -1,0 +1,28 @@
+# ---- 生成物 / 派生物：由命令重建，不入仓 ----
+library/store.db
+library/store.db-journal
+library/store.db-wal
+library/store.db-shm
+library/reading/
+memory/reading/
+memory/hooks/_hook.log
+*.log
+
+# ---- 运行时与缓存 ----
+node_modules/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+tmp/
+.cache/
+.env
+deploy/.env
+*.local
+
+# ---- 系统与编辑器 ----
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+.vscode/
+*.swp
