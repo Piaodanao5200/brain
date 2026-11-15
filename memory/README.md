@@ -20,7 +20,7 @@ ChatGPT ─── HTTPS ─────┘        └── 写入前查重 → 
 不需要 `npm install`，Node 18+ 即可。
 
 ```bash
-cd D:/brain/memory
+cd D:/collaborative project/brain/memory
 
 node bin/kb.mjs index          # 重建索引
 node bin/kb.mjs refresh        # 一键更新：inbox 入库 → 导出投影 → 重建索引 → 刷阅读页
@@ -41,7 +41,7 @@ node bin/kb.mjs stats          # 统计
 ### 1. Claude Code（stdio，最稳）
 
 ```bash
-claude mcp add kb -- node D:/brain/memory/server/mcp-server.mjs --stdio
+claude mcp add kb -- node D:/collaborative project/brain/memory/server/mcp-server.mjs --stdio
 ```
 
 ### 2. Cursor
@@ -53,7 +53,7 @@ claude mcp add kb -- node D:/brain/memory/server/mcp-server.mjs --stdio
   "mcpServers": {
     "kb": {
       "command": "node",
-      "args": ["D:/brain/memory/server/mcp-server.mjs", "--stdio"]
+      "args": ["D:/collaborative project/brain/memory/server/mcp-server.mjs", "--stdio"]
     }
   }
 }
@@ -66,7 +66,7 @@ claude mcp add kb -- node D:/brain/memory/server/mcp-server.mjs --stdio
 ```toml
 [mcp_servers.kb]
 command = "node"
-args = ["D:/brain/memory/server/mcp-server.mjs", "--stdio"]
+args = ["D:/collaborative project/brain/memory/server/mcp-server.mjs", "--stdio"]
 ```
 
 ### 4. ChatGPT / 任何远程客户端（HTTP）
@@ -101,8 +101,8 @@ PORT=8787 KB_TOKEN=<你的令牌> node server/mcp-server.mjs
 ```json
 {
   "hooks": {
-    "SessionStart":     [{ "hooks": [{ "type": "command", "command": "bash \"D:/brain/memory/hooks/wb-run.sh\"", "timeout": 20 }] }],
-    "UserPromptSubmit": [{ "hooks": [{ "type": "command", "command": "bash \"D:/brain/memory/hooks/wb-run.sh\"", "timeout": 15 }] }]
+    "SessionStart":     [{ "hooks": [{ "type": "command", "command": "bash \"D:/collaborative project/brain/memory/hooks/wb-run.sh\"", "timeout": 20 }] }],
+    "UserPromptSubmit": [{ "hooks": [{ "type": "command", "command": "bash \"D:/collaborative project/brain/memory/hooks/wb-run.sh\"", "timeout": 15 }] }]
   }
 }
 ```
@@ -143,7 +143,7 @@ PORT=8787 KB_TOKEN=<你的令牌> node server/mcp-server.mjs
 **同样的机制也能挂到 Claude Code**（把命令换成 `node <路径>/hooks/wb-context.mjs` 即可，它输出的 `hookSpecificOutput.additionalContext` 格式两者通用）：
 
 ```json
-{ "hooks": { "UserPromptSubmit": [{ "hooks": [{ "type": "command", "command": "node D:/brain/memory/hooks/wb-context.mjs" }] }] } }
+{ "hooks": { "UserPromptSubmit": [{ "hooks": [{ "type": "command", "command": "node D:/collaborative project/brain/memory/hooks/wb-context.mjs" }] }] } }
 ```
 
 `hooks/session-start.mjs` 与 `hooks/user-prompt-submit.mjs` 是早期只查记忆库的版本，保留兼容，新装请用 `wb-context.mjs`。
@@ -164,7 +164,7 @@ PORT=8787 KB_TOKEN=<你的令牌> node server/mcp-server.mjs
 ## 上云
 
 ```bash
-cd D:/brain/memory/deploy
+cd D:/collaborative project/brain/memory/deploy
 cp .env.example .env
 node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"   # 生成令牌填进 .env
 # 填好 KB_DOMAIN 与 KB_TOKEN 后

@@ -1,6 +1,6 @@
 # library
 
-原文知识库。跟 `D:/brain/memory` 是两件事，别混：
+原文知识库。跟 `D:/collaborative project/brain/memory` 是两件事，别混：
 
 | | memory（记忆体） | library（这里） |
 |---|---|---|
@@ -17,7 +17,7 @@
 最省事的方式：**把文件丢进 `inbox/`，然后一条命令**。
 
 ```bash
-cd D:/brain/library
+cd D:/collaborative project/brain/library
 python bin/kb.py sync      # inbox 里有什么就导什么，成功的自动清空
 ```
 
@@ -41,7 +41,7 @@ python bin/kb.py show md-73a4db4ff9         # 看某篇的章节结构
 ```
 1. 大模型能力与速度排名 · 2026 年 11 月
    MD · 一、先给结论 · 第 2 段 · md-73a4db4ff9
-   出处: D:\brain\library\sources\md\73a4db4f_report.md
+   出处: D:\collaborative project\brain\library\sources\md\73a4db4f_report.md
    1. **最强和最优不是同一个模型。** Claude Fable 5.2 能力第一（AA 智能指数 65）…
 ```
 

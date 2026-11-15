@@ -39,7 +39,7 @@ vault/90-archive/   过期但保留
   "mcpServers": {
     "kb-memory": {
       "command": "node",
-      "args": ["D:\\brain\\memory\\server\\mcp-server.mjs", "--stdio"]
+      "args": ["D:\\collaborative project\\brain\\memory\\server\\mcp-server.mjs", "--stdio"]
     }
   }
 }
@@ -48,7 +48,7 @@ vault/90-archive/   过期但保留
 **Claude Code**（一条命令就行）：
 
 ```bash
-claude mcp add kb-memory -- node "D:\brain\memory\server\mcp-server.mjs" --stdio
+claude mcp add kb-memory -- node "D:\collaborative project\brain\memory\server\mcp-server.mjs" --stdio
 ```
 
 **Codex**（`~/.codex/config.toml`）：
@@ -56,13 +56,13 @@ claude mcp add kb-memory -- node "D:\brain\memory\server\mcp-server.mjs" --stdio
 ```toml
 [mcp_servers.kb-memory]
 command = "node"
-args = ["D:\\brain\\memory\\server\\mcp-server.mjs", "--stdio"]
+args = ["D:\\collaborative project\\brain\\memory\\server\\mcp-server.mjs", "--stdio"]
 ```
 
 **HTTP 模式的客户端**（Streamable HTTP，无状态）：
 
 ```bash
-cd D:/brain/memory && node server/mcp-server.mjs     # 监听 127.0.0.1:8787
+cd D:/collaborative project/brain/memory && node server/mcp-server.mjs     # 监听 127.0.0.1:8787
 # 端点 http://127.0.0.1:8787/mcp
 ```
 
@@ -72,19 +72,19 @@ cd D:/brain/memory && node server/mcp-server.mjs     # 监听 127.0.0.1:8787
 ### B. 命令行（不支持 MCP 时）
 
 ```bash
-node "D:\brain\memory\bin\kb.mjs" search "关键词" -k 5
-node "D:\brain\memory\bin\kb.mjs" read <id>
-node "D:\brain\memory\bin\kb.mjs" new --type decision --title "…" --body "…" --tags a,b --source "…"
-node "D:\brain\memory\bin\kb.mjs" bootstrap          # 会话启动看全局
+node "D:\collaborative project\brain\memory\bin\kb.mjs" search "关键词" -k 5
+node "D:\collaborative project\brain\memory\bin\kb.mjs" read <id>
+node "D:\collaborative project\brain\memory\bin\kb.mjs" new --type decision --title "…" --body "…" --tags a,b --source "…"
+node "D:\collaborative project\brain\memory\bin\kb.mjs" bootstrap          # 会话启动看全局
 ```
 
 查知识库（另一套工具，Python）：
 
 ```bash
-python "D:\brain\library\bin\kb.py" search "关键词"        # 带出处页码
-python "D:\brain\library\bin\kb.py" search "关键词" --json # 机器可读
-python "D:\brain\library\bin\kb.py" list                  # 库里有哪些篇
-python "D:\brain\library\bin\kb.py" show <id>             # 看某篇的分块结构
+python "D:\collaborative project\brain\library\bin\kb.py" search "关键词"        # 带出处页码
+python "D:\collaborative project\brain\library\bin\kb.py" search "关键词" --json # 机器可读
+python "D:\collaborative project\brain\library\bin\kb.py" list                  # 库里有哪些篇
+python "D:\collaborative project\brain\library\bin\kb.py" show <id>             # 看某篇的分块结构
 ```
 
 `python` 不在 PATH 时用：`D:\WorkBuddy\binaries\python\versions\3.13.12\python.exe`
@@ -143,26 +143,27 @@ source: 用户口述 @ 2026-11-15     # 必填
 
 ## 项目存放约定（用户定的，新建项目必须遵守）
 
-新建任何项目时，**先在 `D:\` 下建一个以你自己名字命名的文件夹**，你的全部项目文件与缓存放进去；每个具体项目在其下再建一层：
+按「谁用」分两种放法，别混：
 
-```
-D:\WorkBuddy\<项目名>\        ← 这个 agent 的所有项目
-D:\Claude-Code\<项目名>\
-D:\<你的产品名>\<项目名>\
-```
+| 项目性质 | 放哪 | 例子 |
+|---|---|---|
+| **多个 agent 共用** | `D:\collaborative project\<项目名>\` | `D:\collaborative project\brain\` |
+| **只有自己用** | 自己的目录下 `<自己的目录>\<项目名>\` | `D:\deepseek\<项目名>\`、`D:\WorkBuddy\<项目名>\` |
 
-- 文件夹名用 agent 自报的产品名，**不要用 `agent`、`AI`、`code` 这类通用词**——那样会和别人撞名。
-- 只约束新建项目；已有的 `D:\WorkBuddy\llm-ranking`、`D:\brain\` 保持原位，不要搬。
-- 缓存、日志、临时产物也放在该 agent 自己的文件夹里，不要散落到 `D:\` 根目录或其他 agent 的目录。
+- 判断标准只有一句：**这个项目别的 agent 会不会读或写？** 会 → `collaborative project`；不会 → 自己的目录。
+- `collaborative project` 名字里**带空格**，命令行里写完整路径一律加引号，别拼字符串。
+- 文件夹名用 agent 自报的产品名，不要用 `agent`、`AI`、`code` 这类通用词——会和别人撞名。
+- 只约束新建项目；已有的 `D:\WorkBuddy\llm-ranking` 保持原位，不要搬。
+- 缓存、日志、临时产物放在各自项目目录里，不要散落到 `D:\` 根目录。
 
-对应记忆条目：`fact-20261115-bb6e`。
+对应记忆条目：`fact-20261115-bb6e` 的继任条目（`kb search "collaborative project"`）。
 
 ## 自检
 
 配好之后，用这条验证是否真的连上：
 
 ```bash
-node "D:\brain\memory\bin\kb.mjs" search "向量库" -k 3
+node "D:\collaborative project\brain\memory\bin\kb.mjs" search "向量库" -k 3
 ```
 
 有输出（应命中 `knowledge-20261115-e002`）就说明通；报错见下。

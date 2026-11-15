@@ -20,7 +20,7 @@ import { scan, recent, search } from "../server/lib/vault.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const LOG = join(HERE, "_hook.log");
-const KB_ROOT = process.env.KB_ROOT || "D:/brain/library";
+const KB_ROOT = process.env.KB_ROOT || "D:/collaborative project/brain/library";
 const KB_PY = join(KB_ROOT, "bin", "kb.py");
 const T0 = Date.now();
 
@@ -161,8 +161,8 @@ function onSessionStart(payload) {
   const lines = [
     "<kb-context>",
     "你有两个本地库，路径固定，可直接读写：",
-    "· 记忆库 D:/brain/memory/vault — 我们定过什么（决策/事实/坑/待办）",
-    "· 知识库 D:/brain/library — 资料原文（PDF/网页/文档，带页码与出处）",
+    "· 记忆库 D:/collaborative project/brain/memory/vault — 我们定过什么（决策/事实/坑/待办）",
+    "· 知识库 D:/collaborative project/brain/library — 资料原文（PDF/网页/文档，带页码与出处）",
     "需要细节时去查（kb_search / kb_read，或 python bin/kb.py search \"词\"），不要凭印象复述历史结论。",
     "铁律：记忆与代码/文件冲突时，以文件为准并顺手修正记忆；查不到就写「暂无数据」，不估算。",
     "",

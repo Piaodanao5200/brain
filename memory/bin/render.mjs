@@ -16,7 +16,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
-const ROOT = path.resolve(HERE, '..');            // D:/brain/memory
+const ROOT = path.resolve(HERE, '..');            // D:/collaborative project/brain/memory
 const VAULT = path.join(ROOT, 'vault');
 const KB_ROOT = path.resolve(ROOT, '..', 'library');
 const KB_READING = path.join(KB_ROOT, 'reading');
@@ -28,7 +28,7 @@ const SYSTEMS = [
   {
     key: 'memory',
     label: '记忆体',
-    where: 'D:/brain/memory/vault',
+    where: 'D:/collaborative project/brain/memory/vault',
     mode: '每次会话自动注入',
     color: 'mem',
     blurb: 'agent 应该一直记得的事',
@@ -38,7 +38,7 @@ const SYSTEMS = [
   {
     key: 'kb',
     label: '知识库',
-    where: 'D:/brain/library',
+    where: 'D:/collaborative project/brain/library',
     mode: 'agent 主动查才进来',
     color: 'kb',
     blurb: 'agent 需要时去翻的资料',
