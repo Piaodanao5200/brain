@@ -8,12 +8,13 @@ updated: 2026-11-16
 
 # 总索引
 
-> 由 `node bin/kb.mjs index` 自动生成，请勿手改。共 19 条有效条目。
+> 由 `node bin/kb.mjs index` 自动生成，请勿手改。共 20 条有效条目。
 > 每条格式：`id` 标题 · #标签 · 更新日期
 
-## 知识（3）
+## 知识（4）
 
 - `knowledge-20261116-05ba` 多 agent 共用 skill：一份实体 + 各 agent 目录挂 Junction · #约定 #skill #目录结构 #junction · 2026-11-16
+- `knowledge-20261116-1c14` 本机推 GitHub 只能走 API，且 commit 必须接上远程父节点才不丢历史 · #github #git #api #推送 · 2026-11-16
 - `knowledge-20261115-e001` MCP 统一传输但不统一语义，必须选一个唯一真源 · #mcp #协议 #互通 · 2026-11-15
 - `knowledge-20261115-e002` 向量库不是记忆层，冲突消解比检索更重要 · #记忆 #架构 #向量库 · 2026-11-15
 
