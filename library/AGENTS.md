@@ -43,6 +43,7 @@ store.db      分块索引，删了可以用 rebuild 从 sources/ 重建
 
 ## 注意
 
+- **临时转单个文件不必入库**：`markitdown "某文件.pptx" > 输出.md` 直接出 md（本机 0.1.9，只装了 docx/pptx/xlsx/csv 四类解析，PDF 它走 pdfminer 会丢表格，扫描件和音视频它依赖云端或用不了）。正式入库的转换统一走 `bin/md_export.py`，引擎怎么分派见该文件头部注释。
 - **`store.db` 里存的是绝对路径。** 整个目录搬家后要更新路径（`update documents set path=replace(...)`），不要用 `rebuild`——有 OCR/转写的库重建一次要跑很久。
 - **`markdown/` 和 `reading/` 都是派生物，别手改。** 前者是原文的干净版本（给人读、给 agent 全文读），后者带出处锚点（用来核对某句话出处在哪）。要改内容改原件再重转，或把改好的 md 当新文件丢进 `inbox/`。
 - **`md_status=partial` 表示文字来自 OCR 或语音转写**，没有版面结构，可能有识别错误。引用前核对原件。

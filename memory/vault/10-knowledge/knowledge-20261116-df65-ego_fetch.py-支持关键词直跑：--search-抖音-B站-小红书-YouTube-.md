@@ -10,7 +10,7 @@ valid_from: 2026-11-16
 supersedes: []
 status: active
 confidence: 0.9
-source: D:\WorkBuddy\skills\zw-summary\adapters\ego_fetch.py + README.md，2026-11-16 实测（WorkBuddy agent）
+source: D:\collaborative project\skills\zw-summary\adapters\ego_fetch.py + README.md，2026-11-16 实测（WorkBuddy agent）
 ---
 
 结论：zw-summary 的 ego_fetch.py 加了 --search，一条命令走完「站内搜索 → 取前 N 条 → 逐条落盘 → 索引表」，抖音、B站、小红书、YouTube 实测全通，X 不可用。
