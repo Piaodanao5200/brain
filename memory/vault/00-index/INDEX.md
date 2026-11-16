@@ -23,9 +23,9 @@ updated: 2026-11-16
 ## 决策（4）
 
 - `decision-20261116-1dc5` ego 批量任务是否并行，由 agent 自行判断，不为此询问用户 · #ego #并行 #决策权限 #协作约定 · 2026-11-16
+- `decision-20261116-f828` 自动注入改走 MEMORY.md：桌面版不执行 shell hook · #架构 #hook #自动检索 · 2026-11-16
 - `decision-20261115-a001` 用 Markdown 文件作为唯一真源，暂不引入向量库 · #架构 #存储 #markdown · 2026-11-15
 - `decision-20261115-a002` 同一份 MCP 服务同时暴露 stdio 与 HTTP 两种传输 · #架构 #mcp #部署 · 2026-11-15
-- `decision-20261115-a6d4` 自动检索靠 WorkBuddy hook，不依赖 MCP 连接 · #架构 #hook #自动检索 · 2026-11-15
 
 ## 事实（12）
 
