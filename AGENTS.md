@@ -114,6 +114,17 @@ source: 用户口述 @ 2026-11-15     # 必填
 
 **不要全量加载索引内容。** 索引是地图，不是内容。全读会挤占上下文，且大部分与本次无关。
 
+### WorkBuddy 桌面版没有自动注入（2026-11-16 起）
+
+`~/.workbuddy/settings.json` 里的 shell hook 在 WorkBuddy 桌面版 5.11.3 **不会被执行**：内核会读到 `hooks` 键（日志 `settingsKeys` 可见），但运行时只跑内置 `conversation-hook`，外部命令零执行。手动跑 `wb-run.sh` 正常，所以不是脚本或路径问题。重启、改路径、无空格探针均无效。
+
+替代方案（已在用）：
+
+- `D:\WorkBuddy\.workbuddy\memory\MEMORY.md` 放本库的**紧凑索引 + 命令**，WorkBuddy 每次会话自动注入（就是上下文里的 `working_memory_content`）。
+- 索引随条目增加要同步更新，否则新会话看不到新条目。
+- 需要全文时用 CLI：`node memory/bin/kb.mjs search "…" -k 5` / `read <id>`。
+- MCP 配置（`~/.workbuddy/mcp.json` 的 `kb`）本身正常，stdio 可启动，但桌面版未加载到工具列表；能用就用，不能用别卡在这。
+
 ## 写入纪律（硬约束）
 
 1. **先查后写。** `kb_write` 前必须 `kb_search`；同标题会被拦下来提醒改用 `kb_supersede`。

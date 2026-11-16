@@ -20,6 +20,55 @@ import { VAULT, scan, search, read, writeEntry, supersede, buildIndex, rebuildIn
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 
+/**
+ * 把 INDEX.md 压成紧凑清单，写进 WorkBuddy 的 MEMORY.md 标记区。
+ * 为什么需要：WorkBuddy 桌面版不执行 settings.json 的 shell hook（2026-11-16 实测），
+ * 会话启动靠 MEMORY.md 自动注入。索引不跟着同步，新会话就看不到新条目。
+ */
+const WB_MEMORY = process.env.WB_MEMORY || "D:/WorkBuddy/.workbuddy/memory/MEMORY.md";
+const MARK_B = "<!-- KB-INDEX:BEGIN -->";
+const MARK_E = "<!-- KB-INDEX:END -->";
+
+function syncMemoryIndex({ quiet = false } = {}) {
+  const idxPath = path.join(VAULT, "00-index/INDEX.md");
+  if (!fs.existsSync(idxPath)) return { ok: false, reason: "INDEX.md 不存在" };
+  if (!fs.existsSync(WB_MEMORY)) return { ok: false, reason: `找不到 ${WB_MEMORY}` };
+
+  const mem = fs.readFileSync(WB_MEMORY, "utf8");
+  const a = mem.indexOf(MARK_B);
+  const b = mem.indexOf(MARK_E);
+  if (a < 0 || b < 0 || b < a) return { ok: false, reason: "MEMORY.md 缺少索引标记" };
+
+  const groups = [];
+  let cur = null;
+  for (const raw of fs.readFileSync(idxPath, "utf8").split("\n")) {
+    const h = raw.match(/^##\s+(.+?)（\d+）/);
+    if (h) {
+      cur = { name: h[1], items: [] };
+      groups.push(cur);
+      continue;
+    }
+    const it = raw.match(/^-\s+`([^`]+)`\s+(.+)$/);
+    if (it && cur) {
+      const short = it[1].replace(/^(knowledge|decision|fact|pitfall|todo|note)-\d{8}-/, "");
+      let title = it[2].split(" · #")[0].trim();
+      if (title.length > 40) title = title.slice(0, 39) + "…";
+      cur.items.push(`- \`${short}\` ${title}`);
+    }
+  }
+
+  const body = groups.filter((g) => g.items.length)
+    .map((g) => `**${g.name}**\n${g.items.join("\n")}`)
+    .join("\n\n");
+  const next = mem.slice(0, a + MARK_B.length) + "\n" + body + "\n" + mem.slice(b);
+  const count = groups.reduce((n, g) => n + g.items.length, 0);
+
+  if (next === mem) return { ok: true, changed: false, count };
+  fs.writeFileSync(WB_MEMORY, next, "utf8");
+  if (!quiet) console.log(C.g(`✓ MEMORY.md 索引已同步 `) + C.dim(`${count} 条`));
+  return { ok: true, changed: true, count };
+}
+
 function parseArgs(argv) {
   const out = { _: [] };
   for (let i = 0; i < argv.length; i++) {
@@ -198,6 +247,20 @@ switch (cmd) {
     rebuildIndex();
     const p = path.join(VAULT, "00-index/INDEX.md");
     console.log(C.g("✓ 索引已重建 ") + C.dim(p));
+    syncMemoryIndex();
+    break;
+  }
+
+  case "mem": {
+    /** 只同步 MEMORY.md 的索引段，不重建 INDEX */
+    const r = syncMemoryIndex({ quiet: true });
+    if (!r.ok) {
+      console.log(C.r("✗ ") + r.reason);
+      process.exitCode = 1;
+    } else {
+      console.log(C.g("✓ MEMORY.md ") + C.dim(r.changed ? `已更新 ${r.count} 条` : "已是最新"));
+      console.log(C.dim("  " + WB_MEMORY));
+    }
     break;
   }
 
@@ -275,7 +338,9 @@ switch (cmd) {
     try {
       rebuildIndex();
       const n = scan().filter((e) => e.type !== "index").length;
-      rows.push(["索引", `INDEX.md 已重建 · 内容条目 ${n} 条`]);
+      const r = syncMemoryIndex({ quiet: true });
+      const tag = r.ok ? (r.changed ? " · MEMORY.md 已同步" : " · MEMORY.md 已是最新") : C.dim(" · MEMORY.md 未同步");
+      rows.push(["索引", `INDEX.md 已重建 · 内容条目 ${n} 条${tag}`]);
     } catch (e) {
       failed++;
       rows.push(["索引", C.r("重建失败 ") + C.dim(String(e.message).slice(0, 60))]);
