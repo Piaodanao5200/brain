@@ -18,6 +18,7 @@
  *   node push.mjs --repo <路径>        # 推送指定仓库
  *   node push.mjs --dry-run           # 只显示要做什么，不动远程
  *   node push.mjs --branch main       # 指定分支
+ *   node push.mjs --reset             # 丢弃远程独有历史，让远程历史 = 本地历史（强推指针）
  *
  * 凭据：从 git 的 credential helper 现取（git credential fill），不写进任何文件。
  */
@@ -36,6 +37,7 @@ function flag(name, def = null) {
 }
 const REPO = path.resolve(flag('repo', process.cwd()));
 const DRY = !!flag('dry-run', false);
+const RESET = !!flag('reset', false);
 const BRANCH = flag('branch', null); // null = 用仓库默认分支
 
 // ---------- 小工具 ----------
@@ -148,7 +150,7 @@ function readTree(treeSha) {
 
 function hasObject(sha) {
   try {
-    sh(['cat-file', '-e', `${sha}^{object}`]);
+    execFileSync('git', ['cat-file', '-e', `${sha}^{object}`], { cwd: REPO, stdio: 'ignore' });
     return true;
   } catch {
     return false;
@@ -168,7 +170,10 @@ console.log(`  本地   ${head.slice(0, 7)}`);
 if (DRY) console.log('  模式   演练（不会改动远程）');
 
 // 远程当前 tip
+// 注意 GitHub API 的不对称：读单个 ref 用 /git/ref/{ref}（单数），
+// 更新却要 /git/refs/{ref}（复数），写错就是 404。
 const refPath = `/repos/${owner}/${repo}/git/ref/heads/${branch}`;
+const refsPatchPath = `/repos/${owner}/${repo}/git/refs/heads/${branch}`;
 let remoteTip = null;
 try {
   const ref = await api('GET', refPath, null, token);
@@ -183,18 +188,22 @@ try {
 
 // 本地相对远程领先的提交（从旧到新）
 let toPush = [];
-if (remoteTip === head) {
+if (!RESET && remoteTip === head) {
   console.log('\n  远程已是最新，无需推送。\n');
   process.exit(0);
-} else if (hasObject(remoteTip)) {
+} else if (!RESET && hasObject(remoteTip)) {
   const list = shText(['rev-list', '--reverse', `${remoteTip}..${head}`]).split('\n').filter(Boolean);
   toPush = list;
 } else {
-  // 远程 tip 不在本地对象库（历史是脚本造的 / 本地被重置过）
-  // 策略：以远程 tip 为父，重放本地从根到 HEAD 的全部提交，结果是内容以本地为准
+  // --reset 或 远程 tip 不在本地对象库（历史是早期脚本造的空父提交 / 本地被重置过）
+  // 策略：重放本地从根到 HEAD 的全部提交，结果远程历史 = 本地历史
   const list = shText(['rev-list', '--reverse', 'HEAD']).split('\n').filter(Boolean);
   toPush = list;
-  console.log(`\n  ! 远程 ${remoteTip.slice(0, 7)} 不在本地历史里，将整体重放本地 ${list.length} 个提交`);
+  if (!RESET) {
+    console.log(`\n  ! 远程 ${remoteTip.slice(0, 7)} 不在本地历史里，将整体重放本地 ${list.length} 个提交`);
+  } else {
+    console.log(`\n  ! --reset：丢弃远程 ${remoteTip.slice(0, 7)} 的独有历史，重放本地全部 ${list.length} 个提交`);
+  }
 }
 
 console.log(`\n  待推送 ${toPush.length} 个提交：`);
@@ -254,7 +263,11 @@ async function uploadTree(localTreeSha) {
 }
 
 // ---------- 逐 commit 重放 ----------
-let parentRemote = remoteTip;
+// --reset：丢弃远程独有的历史，把本地提交从根重新推一遍并强推指针。
+// 用在「远程历史是早期脚本伪造的空父提交」这种场景——此时远程独有历史没有任何价值，
+// 硬接上去只会让本地每次推送都 rebase 出新的 SHA，越推越乱。
+// 两种模式的区别只在于「第一个本地提交的父是谁」。
+let parentRemote = RESET ? null : remoteTip;
 let newTip = remoteTip;
 
 for (const localSha of toPush) {
@@ -263,29 +276,31 @@ for (const localSha of toPush) {
   const res = await api('POST', `/repos/${owner}/${repo}/git/commits`, {
     message: c.message,
     tree,
-    parents: [parentRemote],
+    parents: parentRemote ? [parentRemote] : [],
     author: c.author,
     committer: c.committer,
   }, token);
   const same = res.sha === localSha ? '  = 与本地一致' : '';
-  console.log(`\n  ✓ ${localSha.slice(0, 7)} → ${res.sha.slice(0, 7)}${same}`);
+  console.log(`  ✓ ${localSha.slice(0, 7)} → ${res.sha.slice(0, 7)}${same}`);
   parentRemote = res.sha;
   newTip = res.sha;
 }
 
 if (uploaded) console.log(`\n  上传 ${uploaded} 个对象，复用 ${reused} 个`);
 
-// ---------- 移动分支指针 ----------
-await api('PATCH', refPath, { sha: newTip, force: false }, token);
-console.log(`\n  ✓ ${branch} 指针 ${remoteTip.slice(0, 7)} → ${newTip.slice(0, 7)}`);
-
+// 先把对象缓存落盘：即使移动指针失败，重跑也不用重新上传
 fs.writeFileSync(cachePath, JSON.stringify(cache, null, 0));
 
-// 如果重放出来的 sha 与本地一致，把本地 origin/<branch> 也更新掉，避免 git status 误报
+// ---------- 移动分支指针 ----------
+await api('PATCH', refsPatchPath, { sha: newTip, force: RESET }, token);
+console.log(`\n  ✓ ${branch} 指针 ${remoteTip.slice(0, 7)} → ${newTip.slice(0, 7)}`);
+
+// 把本地 origin/<branch> 也对齐，免得 git status 一直说「领先 N 个提交」。
+// 只有新对象在本地存在时才能写（重放出来的 SHA 可能本地没有）。
 try {
   sh(['update-ref', `refs/remotes/origin/${branch}`, newTip]);
 } catch {
-  /* 忽略 */
+  console.log(`  ! refs/remotes/origin/${branch} 未能更新（该对象不在本地），git status 可能显示领先`);
 }
 
 if (newTip === head) {
