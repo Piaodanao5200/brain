@@ -192,8 +192,17 @@ node "D:\collaborative project\brain\memory\bin\kb.mjs" search "向量库" -k 3
 
 ## 同步到 GitHub
 
-本机 `git push` 在本网络下不通（`github.com:443` TLS 被中断），**不要反复重试 git push**，
-用 API 推送脚本：
+`git` 已可用：`github.com:443` 本身是通的，之前的失败是 schannel 在受限令牌下取不到凭据
+（`SEC_E_NO_CREDENTIALS`），看着像 TLS 中断。已在 `~/.gitconfig` 设 `http.sslBackend=openssl`，
+并把 `https://github.com/` 的 `extraheader` 认证写好；私有仓库的 `ls-remote` / `clone` / `push --dry-run`
+均实测通过。
+
+- 沙箱里 **credential helper 不可用**：git 通过 msys `sh` 启动 helper，而沙箱禁命名管道，helper 一律失败。
+  认证靠 extraheader，不要改回 GCM / store。
+- `git` 在 WorkBuddy 的 PortableGit 目录下，已加入用户 PATH，但**已运行的 DSH 进程要重启**才认；
+  在那之前用绝对路径调用。
+
+备选（纯 API，不依赖本地 git）：
 
 ```bash
 node "D:\collaborative project\brain\memory\bin\push.mjs" --repo <仓库路径>
