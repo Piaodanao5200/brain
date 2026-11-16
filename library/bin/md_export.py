@@ -273,7 +273,8 @@ def render_doc(db, doc, force=False, quiet=False) -> str:
         meta["note"] = "文字来自 OCR 或语音转写，可能有识别错误，引用前请核对原件"
     MD_DIR.mkdir(parents=True, exist_ok=True)
     text = _frontmatter(meta) + "# %s\n\n%s\n" % (title or path.stem, body.strip())
-    out.write_text(text, encoding="utf-8")
+    # newline="\n"：Windows 上 write_text 默认会写成 CRLF，入 git 后每篇都变成整篇 diff
+    out.write_text(text, encoding="utf-8", newline="\n")
 
     db.execute(
         "UPDATE documents SET md_path=?, md_engine=?, md_status=? WHERE id=?",
