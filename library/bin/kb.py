@@ -977,7 +977,7 @@ def cmd_md(args):
     made = stat.get("ok", 0) + stat.get("partial", 0)
     print("markdown：新增 %d 篇（其中 %d 篇只有识别文字、无版面结构）· 跳过 %d · 失败 %d"
           % (made, stat.get("partial", 0), stat.get("skip", 0), stat.get("failed", 0)))
-    if stat.get("failed"):
+    if stat.get("failed") and not args.retry:
         print("  失败项重试：python bin/kb.py md --retry")
 
     keep = {Path(r[0]).name for r in
