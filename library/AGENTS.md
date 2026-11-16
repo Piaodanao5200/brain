@@ -41,6 +41,16 @@ reading/      检索投影，带「出处：第 N 页」锚点（自动生成，
 store.db      分块索引，删了可以用 rebuild 从 sources/ 重建
 ```
 
+## 资料 → 结论流程
+
+入库只到「全文可查」为止，记忆体的结论条目要 agent 单独拟：
+
+```bash
+python bin/kb.py pending     # 已入库但还没有结论条目的资料
+```
+
+读全文 → 拟结论 → 用户点头 → `kb.mjs new` 写入，正文末尾加 `<sub>出处：markdown/<文件名></sub>`。写入后 `pending` 不再列它。不自动生成（宁可缺失，不能污染）。详见根目录 AGENTS.md。
+
 ## 注意
 
 - **临时转单个文件不必入库**：`markitdown "某文件.pptx" > 输出.md` 直接出 md（本机 0.1.9，只装了 docx/pptx/xlsx/csv 四类解析，PDF 它走 pdfminer 会丢表格，扫描件和音视频它依赖云端或用不了）。正式入库的转换统一走 `bin/md_export.py`，引擎怎么分派见该文件头部注释。

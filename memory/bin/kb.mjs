@@ -334,6 +334,14 @@ switch (cmd) {
       rows.push(["投影", C.r("导出失败")]);
     }
 
+    // ③.5 待出结论清单（agent 读全文拟结论，用户点头才写入）
+    try {
+      const n = +pyRun(["bin/kb.py", "pending", "--quiet"]).trim();
+      rows.push(["待出结论", n > 0 ? C.y(`${n} 篇`) + C.dim(" · 让 agent 读全文拟结论") : C.dim("无")]);
+    } catch {
+      rows.push(["待出结论", C.dim("检测失败")]);
+    }
+
     // ④ 重建记忆体索引
     try {
       rebuildIndex();

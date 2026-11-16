@@ -889,6 +889,53 @@ def cmd_rebuild(args):
     cmd_stats(args)
 
 
+VAULT = ROOT.parent / "memory" / "vault"
+
+
+def cmd_pending(args):
+    """列出已入库但记忆体还没有结论条目的资料。
+
+    判定依据：vault 条目正文或 source 字段里出现 markdown/<文件名> 的引用。
+    结论条目写入时正文末尾加 <sub>出处：markdown/<文件名></sub>，本命令
+    下次就不再列它。拟结论由 agent 读全文后进行，用户点头才写入——
+    不自动生成（宁可缺失，不能污染）。
+    """
+    db = connect()
+    docs = db.execute(
+        "SELECT id,title,kind,added,md_path,nchunks FROM documents ORDER BY added DESC"
+    ).fetchall()
+
+    cited = set()
+    if VAULT.exists():
+        for f in VAULT.rglob("*.md"):
+            text = f.read_text(encoding="utf-8", errors="ignore")
+            for m in re.finditer(r"markdown/([^\s`)\]]+\.md)", text):
+                cited.add(m.group(1))
+
+    rows = []
+    for doc_id, title, kind, added, md_path, n in docs:
+        if not md_path:
+            continue  # 还没产出 md 的（转换失败），不在待出结论范围
+        if Path(md_path).name in cited:
+            continue
+        rows.append((doc_id, title or "(无标题)", kind, (added or "")[:10], md_path, n))
+
+    if args.quiet:
+        print(len(rows))
+        return
+
+    if not rows:
+        print("✓ 所有资料都有结论条目")
+        return
+    print("待出结论 %d 篇：" % len(rows))
+    for doc_id, title, kind, added, md_path, n in rows:
+        print("  %s  [%s] %s  (%s)" % (doc_id, kind, title, added))
+        print("    全文: %s  (%d 段)" % (md_path, n))
+    print()
+    print("流程：agent 读全文 → 拟结论草稿 → 用户点头 → kb.mjs new 写入，")
+    print("正文末尾加一行 <sub>出处：markdown/<文件名></sub>。")
+
+
 def cmd_export(args):
     """把索引里的分块导出成人可读的 Markdown，供 Obsidian / Git 使用。
     原文仍在 sources/，这里只是投影，随时可重新生成。"""
@@ -1037,6 +1084,10 @@ def main():
     ex = sub.add_parser("export-md", help="导出人读的 Markdown 投影到 reading/")
     ex.add_argument("--out", help="输出目录，默认 reading/")
     ex.set_defaults(func=cmd_export)
+
+    pd = sub.add_parser("pending", help="列出已入库但还没有结论条目的资料")
+    pd.add_argument("--quiet", action="store_true", help="只输出数量")
+    pd.set_defaults(func=cmd_pending)
 
     md = sub.add_parser("md", help="产出 markdown 原文到 markdown/（派生物，可重转）")
     md.add_argument("--all", action="store_true", help="全量重转，覆盖已有的")
