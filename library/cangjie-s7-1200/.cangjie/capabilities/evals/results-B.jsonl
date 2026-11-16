@@ -1,0 +1,42 @@
+{"case_id": "power-budget-sizing__st-01", "run": 2, "selected_skill": "power-budget-sizing", "reason": "算 5V/24V 电流预算、是否加外部电源，命中功率预算核算"}
+{"case_id": "power-budget-sizing__st-02", "run": 2, "selected_skill": "power-budget-sizing", "reason": "24V 带不动想并联电源，命中“24V 不够能并联吗”信号"}
+{"case_id": "power-budget-sizing__st-03", "run": 2, "selected_skill": "power-budget-sizing", "reason": "can this CPU power these modules，典型功率预算触发信号"}
+{"case_id": "power-budget-sizing__snt-01", "run": 2, "selected_skill": "none", "reason": "订货号与针脚检索，功率核算 skill 明确不用于查订货号针脚，无对应 skill"}
+{"case_id": "power-budget-sizing__snt-02", "run": 2, "selected_skill": "online-troubleshooting", "reason": "SF 红灯、诊断缓冲区、时间错误，属现场故障定位"}
+{"case_id": "power-budget-sizing__edge-01", "run": 2, "selected_skill": "none", "reason": "最多插几个信号模块属硬件规格查询，非功率预算也非其他 skill 触发条件"}
+{"case_id": "program-structure-decision__st-01", "run": 2, "selected_skill": "program-structure-decision", "reason": "多台同类设备复用、FB vs FC、reentrancy，命中程序结构决策"}
+{"case_id": "program-structure-decision__st-02", "run": 2, "selected_skill": "program-structure-decision", "reason": "中间数据跨扫描丢失、怀疑 FC/FB 用错，命中 data not retained"}
+{"case_id": "program-structure-decision__st-03", "run": 2, "selected_skill": "program-structure-decision", "reason": "中断 OB 调 FC 的嵌套层数，命中 nesting depth 信号"}
+{"case_id": "program-structure-decision__snt-01", "run": 2, "selected_skill": "none", "reason": "TON 引脚含义属指令语法，程序结构 skill 明确不用于查指令语法，无对应 skill"}
+{"case_id": "program-structure-decision__snt-02", "run": 2, "selected_skill": "data-consistency", "reason": "HMI 相关数值对不上、读写撕裂，命中 torn data 信号"}
+{"case_id": "program-structure-decision__edge-01", "run": 2, "selected_skill": "program-structure-decision", "reason": "问用哪种块，命中 OB/FC/FB/DB 怎么选的核心触发"}
+{"case_id": "data-consistency__st-01", "run": 2, "selected_skill": "data-consistency", "reason": "HMI 关联值对不上、一个更新一个没更新，多值撕裂"}
+{"case_id": "data-consistency__st-02", "run": 2, "selected_skill": "data-consistency", "reason": "PIP 配了不刷新，命中 PIP 不刷新/process image partition"}
+{"case_id": "data-consistency__st-03", "run": 2, "selected_skill": "data-consistency", "reason": "循环与中断 OB 间 torn data、共享变量保护、临界区"}
+{"case_id": "data-consistency__snt-01", "run": 2, "selected_skill": "none", "reason": "Real/DInt 占几字节属单变量类型地址，一致性 skill 明确不用于，无对应 skill"}
+{"case_id": "data-consistency__snt-02", "run": 2, "selected_skill": "communication-config", "reason": "PROFINET 设备名不匹配、数据交换起不来，命中通信组态信号"}
+{"case_id": "data-consistency__edge-01", "run": 2, "selected_skill": "data-consistency", "reason": "PROFINET 一致性数据读写是 data-consistency 场景，通信 skill 不用于一致性读写"}
+{"case_id": "communication-config__st-01", "run": 2, "selected_skill": "communication-config", "reason": "Modbus TCP/RTU 选型、主从与功能码，命中通信协议组态"}
+{"case_id": "communication-config__st-02", "run": 2, "selected_skill": "communication-config", "reason": "设备换了数据交换起不来、怀疑设备名，命中设备名不匹配/no data exchange"}
+{"case_id": "communication-config__st-03", "run": 2, "selected_skill": "communication-config", "reason": "PUT/GET 默认禁用、如何允许，命中 permit PUT GET"}
+{"case_id": "communication-config__snt-01", "run": 2, "selected_skill": "online-troubleshooting", "reason": "PROFINET 从站红灯、诊断缓冲区模块故障、定位，属故障排查"}
+{"case_id": "communication-config__snt-02", "run": 2, "selected_skill": "online-troubleshooting", "reason": "CPU 红黄 LED 状态，命中 CPU 亮灯/红灯诊断场景"}
+{"case_id": "communication-config__edge-01", "run": 2, "selected_skill": "communication-config", "reason": "RS485 终端电阻要不要接，命中 RS485 端接/termination"}
+{"case_id": "online-troubleshooting__st-01", "run": 2, "selected_skill": "online-troubleshooting", "reason": "SF 红灯、停机、诊断缓冲区一堆条目从哪看起，典型在线诊断"}
+{"case_id": "online-troubleshooting__st-02", "run": 2, "selected_skill": "online-troubleshooting", "reason": "模拟量 32767 断线还是超量程，命中在线诊断场景"}
+{"case_id": "online-troubleshooting__st-03", "run": 2, "selected_skill": "online-troubleshooting", "reason": "CPU fault/STOP、诊断缓冲区时间错误、root cause，命中故障定位"}
+{"case_id": "online-troubleshooting__snt-01", "run": 2, "selected_skill": "storage-firmware-maintenance", "reason": "传送卡批量灌程序，命中 transfer card 信号"}
+{"case_id": "online-troubleshooting__snt-02", "run": 2, "selected_skill": "power-budget-sizing", "reason": "1214C 带 SM/CM 问 5V 够不够，功率预算核算"}
+{"case_id": "online-troubleshooting__edge-01", "run": 2, "selected_skill": "online-troubleshooting", "reason": "下载后 CPU 报诊断错误定位是程序还是下载问题，属现场诊断错误定位"}
+{"case_id": "storage-firmware-maintenance__st-01", "run": 2, "selected_skill": "storage-firmware-maintenance", "reason": "多台 CPU 灌程序选传送卡还是程序卡，命中传送卡/程序卡"}
+{"case_id": "storage-firmware-maintenance__st-02", "run": 2, "selected_skill": "storage-firmware-maintenance", "reason": "恢复出厂怕丢 IP 和保持性数据，命中 retain IP 信号"}
+{"case_id": "storage-firmware-maintenance__st-03", "run": 2, "selected_skill": "storage-firmware-maintenance", "reason": "忘记 CPU 密码恢复访问，命中 forgot password"}
+{"case_id": "storage-firmware-maintenance__snt-01", "run": 2, "selected_skill": "device-replacement", "reason": "V3.0 换 V4.2 且项目含运动控制 TO，命中换型与 TO 版本信号"}
+{"case_id": "storage-firmware-maintenance__snt-02", "run": 2, "selected_skill": "power-budget-sizing", "reason": "24V 带不动扩展模块想并联电源，命中并联 24V 信号"}
+{"case_id": "storage-firmware-maintenance__edge-01", "run": 2, "selected_skill": "storage-firmware-maintenance", "reason": "刷固件中途断电怕变砖，命中 firmware update 场景"}
+{"case_id": "device-replacement__st-01", "run": 2, "selected_skill": "device-replacement", "reason": "V3.0 换 V4.2、跨版本刷固件、能否回退，命中换型与 rollback"}
+{"case_id": "device-replacement__st-02", "run": 2, "selected_skill": "device-replacement", "reason": "换后编译下载失败、STEP7 版本、运动 TO，命中换型触发"}
+{"case_id": "device-replacement__st-03", "run": 2, "selected_skill": "device-replacement", "reason": "V3.0 换 V4.2 的 DB 预留区与密码映射，命中 replace CPU/密码映射"}
+{"case_id": "device-replacement__snt-01", "run": 2, "selected_skill": "storage-firmware-maintenance", "reason": "同大版本日常刷固件，换型 skill 明确不用于日常固件更新，归固件维护"}
+{"case_id": "device-replacement__snt-02", "run": 2, "selected_skill": "online-troubleshooting", "reason": "CPU 红灯停机、诊断缓冲区定位故障，属在线诊断"}
+{"case_id": "device-replacement__edge-01", "run": 2, "selected_skill": "none", "reason": "V4.1 项目在 V4.2 直接运行，换型 skill 明确不用于 V4.0/4.1 直接运行，无对应 skill"}

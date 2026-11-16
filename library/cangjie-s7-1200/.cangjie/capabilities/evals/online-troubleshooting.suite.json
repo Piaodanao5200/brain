@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "suite_id": "suite.online-troubleshooting",
+  "target": "online-troubleshooting",
+  "split_seed": 42,
+  "train_ratio": 1.0,
+  "trigger_cases": [
+    {
+      "case_id": "online-troubleshooting__st-01",
+      "prompt": "CPU 面板 SF 红灯亮，还停机了，诊断缓冲区一堆条目，我该从哪看起？",
+      "expected": "should_trigger",
+      "runs": 1
+    },
+    {
+      "case_id": "online-troubleshooting__st-02",
+      "prompt": "模拟量读到 32767，分不清是断线还是超量程，怎么判断？",
+      "expected": "should_trigger",
+      "runs": 1
+    },
+    {
+      "case_id": "online-troubleshooting__st-03",
+      "prompt": "CPU fault light is on and it went to STOP, diagnostic buffer has a time error entry — root cause?",
+      "expected": "should_trigger",
+      "runs": 1
+    },
+    {
+      "case_id": "online-troubleshooting__snt-01",
+      "prompt": "怎么用传送卡给多台 CPU 批量灌程序？",
+      "expected": "sibling",
+      "runs": 1,
+      "sibling_target": "storage-firmware-maintenance"
+    },
+    {
+      "case_id": "online-troubleshooting__snt-02",
+      "prompt": "1214C 带 3 个 SM 和 1 个 CM，5V 电流够不够？",
+      "expected": "sibling",
+      "runs": 1,
+      "sibling_target": "power-budget-sizing"
+    },
+    {
+      "case_id": "online-troubleshooting__edge-01",
+      "prompt": "下载程序后 CPU 一直报诊断错误，是程序问题还是下载问题？",
+      "expected": "edge_case",
+      "runs": 1,
+      "edge_expect": {
+        "want_trigger": true
+      }
+    }
+  ]
+}

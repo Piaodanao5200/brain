@@ -1,0 +1,42 @@
+{"case_id": "power-budget-sizing__st-01", "run": 1, "selected_skill": "power-budget-sizing", "reason": "给出CPU与模块清单要求计算5V/24V电流是否够、要不要加外部电源，正是功率预算核算场景。"}
+{"case_id": "power-budget-sizing__st-02", "run": 1, "selected_skill": "power-budget-sizing", "reason": "24V电源带不动想再并联一个24V电源，命中'24V不够能并联吗'信号。"}
+{"case_id": "power-budget-sizing__st-03", "run": 1, "selected_skill": "power-budget-sizing", "reason": "直接问'can this CPU power these modules'，为功率预算典型信号。"}
+{"case_id": "power-budget-sizing__snt-01", "run": 1, "selected_skill": "none", "reason": "查订货号与端子针脚属于检索类，power-budget明确不用于查订货号针脚。"}
+{"case_id": "power-budget-sizing__snt-02", "run": 1, "selected_skill": "online-troubleshooting", "reason": "SF红灯加诊断缓冲区时间错误要求查故障，属在线诊断排查场景。"}
+{"case_id": "power-budget-sizing__edge-01", "run": 1, "selected_skill": "none", "reason": "问最多能插几个信号模块是硬件规格查询，不涉及功率预算或其他skill范围。"}
+{"case_id": "program-structure-decision__st-01", "run": 1, "selected_skill": "program-structure-decision", "reason": "5台同类电机各自记运行时间纠结FB还是FC，命中多台设备复用与FB vs FC信号。"}
+{"case_id": "program-structure-decision__st-02", "run": 1, "selected_skill": "program-structure-decision", "reason": "FC中间数据跨扫描丢失想知道用什么保存，命中'数据没保存住/data not retained'块结构信号。"}
+{"case_id": "program-structure-decision__st-03", "run": 1, "selected_skill": "program-structure-decision", "reason": "问中断OB调用FC最多嵌套多少层，命中嵌套深度信号。"}
+{"case_id": "program-structure-decision__snt-01", "run": 1, "selected_skill": "none", "reason": "问TON定时器引脚含义是查指令语法，program-structure明确不用于查指令语法。"}
+{"case_id": "program-structure-decision__snt-02", "run": 1, "selected_skill": "data-consistency", "reason": "HMI几个相关数值对不上怀疑读写撕裂，命中多值撕裂场景。"}
+{"case_id": "program-structure-decision__edge-01", "run": 1, "selected_skill": "program-structure-decision", "reason": "明确问小程序该用哪种块，命中OB/FC/FB/DB怎么选决策场景。"}
+{"case_id": "data-consistency__st-01", "run": 1, "selected_skill": "data-consistency", "reason": "HMI几个相关联值对不上、一个更新一个没更新，为典型多值读写撕裂。"}
+{"case_id": "data-consistency__st-02", "run": 1, "selected_skill": "data-consistency", "reason": "过程映像分区PIP1配了不刷新，命中'PIP不刷新'信号。"}
+{"case_id": "data-consistency__st-03", "run": 1, "selected_skill": "data-consistency", "reason": "循环与中断OB间撕裂数据要保护共享变量，命中临界区保护场景。"}
+{"case_id": "data-consistency__snt-01", "run": 1, "selected_skill": "none", "reason": "问Real与DInt各占几字节属单变量类型地址，data-consistency明确不用于此。"}
+{"case_id": "data-consistency__snt-02", "run": 1, "selected_skill": "communication-config", "reason": "PROFINET设备名不匹配致数据交换起不来要分配设备名，属通信组态场景。"}
+{"case_id": "data-consistency__edge-01", "run": 1, "selected_skill": "data-consistency", "reason": "PROFINET一致性数据怎么读写正是data-consistency覆盖的内容。"}
+{"case_id": "communication-config__st-01", "run": 1, "selected_skill": "communication-config", "reason": "选Modbus TCP还是RTU、定主从、配功能码，为通信协议选型与组态。"}
+{"case_id": "communication-config__st-02", "run": 1, "selected_skill": "communication-config", "reason": "PROFINET换新设备数据交换起不来怀疑设备名，命中设备名不匹配信号。"}
+{"case_id": "communication-config__st-03", "run": 1, "selected_skill": "communication-config", "reason": "PUT/GET是否默认禁用及如何允许，命中PUT/GET允许信号。"}
+{"case_id": "communication-config__snt-01", "run": 1, "selected_skill": "online-troubleshooting", "reason": "PROFINET从站红灯、诊断缓冲区报模块故障要求定位，属从站故障排查。"}
+{"case_id": "communication-config__snt-02", "run": 1, "selected_skill": "none", "reason": "问CPU红黄LED分别代表什么状态是通用含义查询，非具体故障排查。"}
+{"case_id": "communication-config__edge-01", "run": 1, "selected_skill": "communication-config", "reason": "问RS485终端电阻要不要接、接几个，命中RS485端接信号。"}
+{"case_id": "online-troubleshooting__st-01", "run": 1, "selected_skill": "online-troubleshooting", "reason": "SF红灯且停机、诊断缓冲区条目多不知从哪看起，为现场故障定位。"}
+{"case_id": "online-troubleshooting__st-02", "run": 1, "selected_skill": "online-troubleshooting", "reason": "模拟量读到32767分不清断线还是超量程，命中模拟量歧义值场景。"}
+{"case_id": "online-troubleshooting__st-03", "run": 1, "selected_skill": "online-troubleshooting", "reason": "CPU故障灯亮转STOP、诊断缓冲区时间错误问根因，为故障定位。"}
+{"case_id": "online-troubleshooting__snt-01", "run": 1, "selected_skill": "storage-firmware-maintenance", "reason": "用传送卡给多台CPU批量灌程序，属存储卡批量灌程序场景。"}
+{"case_id": "online-troubleshooting__snt-02", "run": 1, "selected_skill": "power-budget-sizing", "reason": "1214C带3个SM和1个CM问5V电流够不够，为功率预算核算。"}
+{"case_id": "online-troubleshooting__edge-01", "run": 1, "selected_skill": "online-troubleshooting", "reason": "下载后CPU一直报诊断错误要判断原因，本质是对诊断错误的故障排查。"}
+{"case_id": "storage-firmware-maintenance__st-01", "run": 1, "selected_skill": "storage-firmware-maintenance", "reason": "10台CPU灌同一程序选传送卡还是程序卡，命中卡型选择场景。"}
+{"case_id": "storage-firmware-maintenance__st-02", "run": 1, "selected_skill": "storage-firmware-maintenance", "reason": "恢复出厂怕丢IP与保持性数据，命中'恢复出厂/retain IP'信号。"}
+{"case_id": "storage-firmware-maintenance__st-03", "run": 1, "selected_skill": "storage-firmware-maintenance", "reason": "忘记CPU密码想恢复访问，命中'忘记密码/forgot password'信号。"}
+{"case_id": "storage-firmware-maintenance__snt-01", "run": 1, "selected_skill": "device-replacement", "reason": "V3.0换V4.2且项目含运动控制TO，属换型与TO版本检查场景。"}
+{"case_id": "storage-firmware-maintenance__snt-02", "run": 1, "selected_skill": "power-budget-sizing", "reason": "24V带不动扩展模块能否并联电源，命中并联24V电源信号。"}
+{"case_id": "storage-firmware-maintenance__edge-01", "run": 1, "selected_skill": "storage-firmware-maintenance", "reason": "刷固件中途断电的后果，属固件更新维护场景。"}
+{"case_id": "device-replacement__st-01", "run": 1, "selected_skill": "device-replacement", "reason": "V3.0换V4.2能否靠刷固件升级及能否回退，命中跨版本换型与rollback信号。"}
+{"case_id": "device-replacement__st-02", "run": 1, "selected_skill": "device-replacement", "reason": "换型后编译下载失败且STEP7版本旧、带运动TO，命中换型后编译下载失败场景。"}
+{"case_id": "device-replacement__st-03", "run": 1, "selected_skill": "device-replacement", "reason": "V3.0换V4.2涉及DB预留区与密码映射，为换型兼容检查。"}
+{"case_id": "device-replacement__snt-01", "run": 1, "selected_skill": "storage-firmware-maintenance", "reason": "日常同大版本内刷固件属日常固件更新，device-replacement明确不用于此。"}
+{"case_id": "device-replacement__snt-02", "run": 1, "selected_skill": "online-troubleshooting", "reason": "CPU红灯停机、诊断缓冲区有条目要求定位故障，属在线诊断排查。"}
+{"case_id": "device-replacement__edge-01", "run": 1, "selected_skill": "none", "reason": "问V4.1项目能否在V4.2 CPU直接跑，device-replacement明确不用于V4.0/4.1直接运行。"}

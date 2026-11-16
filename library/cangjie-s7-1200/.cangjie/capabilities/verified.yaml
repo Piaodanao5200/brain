@@ -1,0 +1,751 @@
+schema_version: 1
+bundle_id: bundle.s7-1200
+book:
+  title: 西门子 S7-1200 可编程控制器系统手册
+  author: Siemens AG
+  source_pack: brain/library/cangjie-s7-1200/source.md
+  baseline_tag: A5E02486685-AK
+entry:
+  name: s7-1200-plc-guide
+  description: S7-1200 可编程控制器系统手册的可发现主入口，面向工程实践中的决策、计算、流程与排障。覆盖功率预算与供电选型、用户程序结构决策、数据一致性、通信协议选型与组态、在线诊断排障、存储卡固件与出厂复位维护、V3
+    到 V4 设备更换兼容等高频独立意图；纯指令语法、订货号与针脚表不在此入口，走检索参考。
+  core_principles:
+  - 先决策再操作：功率预算、程序结构、协议角色都要先定方向，避免返工。
+  - 安全前置：独立于 PLC 的急停/机电超控不可省，STOP 不等于安全。
+  - 先取证后处置：排障先看 LED 与诊断缓冲区，再按事件到 OB 映射定位。
+  - 不可逆操作先告知：固件更新、出厂复位、设备更换前确认边界与回退可能。
+  - 数据一致性显式化：CPU 只保证单值原子，多值须用 DIS_AIRT/EN_AIRT 等机制。
+  out_of_scope:
+  - 逐条指令语法与参数表速查（位逻辑/定时/计数/数学等，走手册检索）
+  - 订货号、针脚定义、端子排备件套件对照表（走 reference-tables.md 检索）
+  - 与三菱/AB 等其他品牌 PLC 的对比与迁移
+  - 经认证的功能安全（Failsafe）与网络安全设计
+  stop_conditions:
+  - 用户要求的操作涉及运行中设备且未确认已做安全隔离时，先停下要求断电与急停确认。
+  - 固件跨大版本、V3 到 V4 更换、恢复出厂等不可逆动作，未获用户明确确认前不执行。
+  - 问题属于其他品牌或新版固件（V4.4+）特性、本手册 V4.2 未覆盖时，停止并说明范围限制。
+router_entry:
+  name: s7-1200-handbook-router
+  description: S7-1200 系统手册的来源路由入口，按用户问题将其导向对应的能力卡。承载未单独晋级为可发现 Skill 的能力：扫描周期与中断组态、程序下载调试与在线同步、数据类型与寻址规则、安装接线安全规范、HSC/PID/运动控制工艺组态、系统设计七步流程。这些能力不淘汰、经本入口完整可达；同时为所有
+    promoted 能力提供近邻负例分流。
+promotion_budget: 8
+capabilities:
+- capability_id: cap.s7120.power-budget-sizing
+  revision: 1
+  status: active
+  slug: power-budget-sizing
+  title: 功率预算核算与供电选型
+  importance: critical
+  importance_rationale: 命中关键任务 T01（选 CPU/模块并算功率预算）；遗漏后果为供电不足致模块不识别或误并联电源损坏设备；吸收 4
+    条 verified（含附录B定量算例 p06），证据强、可独立复算。
+  one_liner: 先查 CPU 5V/24V 预算，逐项累加模块与 I/O 需求，差额<0 即须加独立外部电源（不得并联、仅共 M）。
+  intents:
+  - 算 S7-1200 功率预算
+  - 判断要不要加外部 24V 电源
+  - 选 CPU 能否带动模块清单
+  - 算 5V/24V 电流余量
+  keywords:
+  - 功率预算
+  - power budget
+  - 5V/24V
+  - 外部电源
+  - external power supply
+  - 电流差额
+  - current headroom
+  - 传感器电源
+  - sensor power
+  - SM/CM/SB
+  - mA
+  also_read:
+  - power-wiring-installation
+  - device-replacement
+  - technology-motion-config
+  card: cards/power-budget-sizing.md
+  frontmatter:
+    description: 计算 S7-1200 CPU 的 5V/24V 功率预算并判定是否需外部电源时激活。场景：有一份 CPU+SM/CM/SB 清单想知道带不带得动、模块不识别怀疑供电不足、24V
+      不够想并联电源、在 1211C~1217C 间选型。信号：'算功率预算/can this CPU power these modules'、'24V 不够能并联吗/parallel
+      another 24V supply'、'5V/24V 余量/current headroom'。不用于：查订货号针脚（走检索）、完整系统设计、LED/诊断排障。输出两路差额表与最小外部电源容量；硬约束不得并联、M
+      共点。
+    tags:
+    - decision
+    - calculation
+    - hardware
+    - power
+  source_evidence:
+  - source_id: A5E02486685-AK
+    version_id: V4.2
+    location: ch4.2 功率预算 p61；附录B 计算功率预算 p1779-1782；附录A 各CPU可用电流 p1549/1567/1584/1601/1620
+  promotion:
+    destination: promoted
+    gate: &id001
+      independent_intent: true
+      independent_contract: true
+      independent_run: true
+      independent_reuse: true
+      independent_eval: true
+    notes: '关键任务 T01、定量可复算、跨项目高频复用、触发词明确；入选 7 个 promoted。 | 吸收 verified: f01, p04,
+      p05, p06'
+- capability_id: cap.s7120.program-structure-decision
+  revision: 1
+  status: active
+  slug: program-structure-decision
+  title: 用户程序结构决策（OB/FC/FB/DB）
+  importance: critical
+  importance_rationale: 命中关键任务 T02（设计用户程序结构）；遗漏后果为 FC/FB 误用致跨扫描数据丢失、多设备串扰；吸收 4 条 verified（含可重入与嵌套硬边界），是全书理论内核。
+  one_liner: 需跨扫描保存状态且多实例用 FB+背景DB；纯运算用 FC；事件入口用对应 OB；先模块化再线性，并核对 16/6 层嵌套。
+  intents:
+  - 决定逻辑放 OB/FC/FB/DB 哪种块
+  - 多台同类设备复用控制逻辑
+  - 排查跨扫描数据丢失
+  - 规划线性还是模块化结构
+  - 规划调用嵌套层级
+  keywords:
+  - OB/FC/FB/DB
+  - 程序结构
+  - program structure
+  - instance DB
+  - 背景数据块
+  - reentrancy
+  - 可重入
+  - nesting depth
+  - 嵌套深度
+  - startup OB
+  also_read:
+  - data-types-addressing
+  - realtime-scan-interrupt
+  - data-consistency
+  card: cards/program-structure-decision.md
+  frontmatter:
+    description: 决定 S7-1200 用户程序该用 OB/FC/FB/DB 哪种块、如何复用与嵌套时激活。场景：从零搭程序纠结逻辑放哪、多台同类设备要复用又不串数据、数据莫名丢失怀疑
+      FC/FB 用错、规划调用层级、线性还是模块化。信号：'OB/FC/FB/DB 怎么选/FB vs FC/instance DB'、'多台设备一个功能块/reentrancy'、'数据没保存住/data
+      not retained'、'嵌套多少层/nesting depth'。不用于：查指令语法、算功率、解决多值撕裂（用 data-consistency）。
+    tags:
+    - decision
+    - program-structure
+    - core-concept
+  source_evidence:
+  - source_id: A5E02486685-AK
+    version_id: V4.2
+    location: ch5.1 p89；ch7.2/7.3 p201-207；ch5.1.1 p93-96
+  promotion:
+    destination: promoted
+    gate: *id001
+    notes: '关键任务 T02、决定数据是否丢失的核心决策、跨项目高频、触发可分；入选 7 个 promoted。 | 吸收 verified: f02,
+      f03, f26, f27'
+- capability_id: cap.s7120.data-consistency
+  revision: 1
+  status: active
+  slug: data-consistency
+  title: 数据一致性保障
+  importance: high
+  importance_rationale: 命中高重要任务 T04（数据一致性访问）；遗漏后果为多值撕裂、HMI 改值被回写覆盖、PIP 静默失效；吸收 5 条
+    verified，与结构/中断/通信均有清晰接口。
+  one_liner: CPU 只保证单值原子；多值用 DIS_AIRT→读写→EN_AIRT 包临界区，传参走引用且优化设置一致，I/O 用 PIP 且必须绑
+    OB。
+  intents:
+  - 解决多值读写撕裂/HMI 值对不上
+  - HMI 改的值被覆盖丢失
+  - 配过程映像分区 PIP
+  - 传大结构选传值还是传引用
+  - PROFINET 一致性数据读写
+  keywords:
+  - 数据一致性
+  - data consistency
+  - torn data
+  - DIS_AIRT
+  - EN_AIRT
+  - 过程映像分区
+  - PIP
+  - process image partition
+  - 优化访问
+  - optimized block access
+  - pass by reference
+  also_read:
+  - program-structure-decision
+  - realtime-scan-interrupt
+  - communication-config
+  card: cards/data-consistency.md
+  frontmatter:
+    description: 处理 S7-1200 多值读写撕裂、PIP 刷新、参数传递丢数据与临界区保护时激活。场景：HMI 画面几个相关值对不上、循环与中断
+      OB 共享变量、HMI 改的值被覆盖丢失、PIP 配了却不刷新、传大结构纠结传值/引用、PROFINET 一致性数据。信号：'数据不一致/值对不上/torn
+      data'、'HMI 改的值丢了/overwritten'、'DIS_AIRT/EN_AIRT 配对'、'PIP 不刷新/process image partition'、'传值还是传引用/optimized
+      DB'。不用于：单变量类型地址、块结构、通信连接组态。
+    tags:
+    - decision
+    - data-consistency
+    - core-concept
+    - diagnostics
+  source_evidence:
+  - source_id: A5E02486685-AK
+    version_id: V4.2
+    location: ch7.4 p213；ch9.5.5 p484-485；ch5.1.2 p91-92；ch7.3.6 p210-212
+  promotion:
+    destination: promoted
+    gate: *id001
+    notes: '高重要任务 T04、触发词具体、跨场景复用（HMI/中断/通信/运动均涉及）；入选 7 个 promoted。 | 吸收 verified:
+      f04, f28, f29, f30, p35'
+- capability_id: cap.s7120.communication-config
+  revision: 1
+  status: active
+  slug: communication-config
+  title: 通信协议选型与组态
+  importance: high
+  importance_rationale: 命中高重要任务 T05（配置通信）；遗漏后果为连接建不起来、设备名不匹配、PUT/GET 误判安全；吸收 7 条 verified（PROFINET/Modbus/RS485/访问保护），触发独立。
+  one_liner: 先定协议与角色再组态连接；PROFINET 先分配设备名，Modbus 先定主从与功能码，RS485 仅两端端接，PUT/GET 须显式启用。
+  intents:
+  - 选 PROFINET/PROFIBUS/PtP/Modbus 并组态
+  - PROFINET 数据交换不运行
+  - 运行时改 IP/设备名
+  - 多 Modbus TCP 连接分配端口
+  - RS485 终端电阻
+  - 启用 PUT/GET 访问
+  keywords:
+  - 通信组态
+  - PROFINET
+  - Modbus
+  - master slave
+  - 主从站
+  - device name
+  - 设备名
+  - RS485 termination
+  - 端接
+  - PUT/GET
+  - function code
+  - T_CONFIG
+  also_read:
+  - data-consistency
+  - power-wiring-installation
+  - online-troubleshooting
+  card: cards/communication-config.md
+  frontmatter:
+    description: 为 S7-1200 选通信协议与角色并组态连接时激活。场景：配 PROFINET/PROFIBUS/PtP/Modbus 不知选哪个、设备名不匹配致数据交换不运行、运行时改
+      IP、多 Modbus TCP 连接分配端口/ID、RS485 端接、PUT/GET 默认禁用。信号：'PROFINET/Modbus 怎么组态/configure'、'设备名不匹配/no
+      data exchange'、'主从/master slave/function code'、'RS485 端接/termination'、'PUT/GET
+      允许/permit PUT GET'。不用于：一致性读写、物理接线、通用排障。
+    tags:
+    - decision
+    - procedure
+    - communication
+  source_evidence:
+  - source_id: A5E02486685-AK
+    version_id: V4.2
+    location: ch11.2 p912-913/1041；ch13.2 p1223；ch7.6.1 p226；ch15.3 p1488-1489；ch13.5
+      p1316
+  promotion:
+    destination: promoted
+    gate: *id001
+    notes: '高重要任务 T05、协议选择是独立高频意图、证据充分；入选 7 个 promoted（PROFIBUS 专流程为本手册轻缺口，能力卡标注）。
+      | 吸收 verified: f31, f50, f51, f56, p38, p39, p40'
+- capability_id: cap.s7120.online-troubleshooting
+  revision: 1
+  status: active
+  slug: online-troubleshooting
+  title: 在线诊断与故障排查
+  importance: critical
+  importance_rationale: 命中关键任务 T07（在线诊断定位故障）；遗漏后果为无法从 LED/诊断缓冲区定位停机根因；吸收 14 条 verified，形成最完整排障链，现场最高频。
+  one_liner: 先转在线取证：LED 判大类、诊断缓冲区看最新条目；按事件→OB 映射判断行为，用诊断指令按粒度递进定位，处置后验证 LED 与缓冲区。
+  intents:
+  - CPU 亮灯/停机排查
+  - 解读诊断缓冲区
+  - 时间错误/诊断错误事件响应
+  - PROFINET 从站/模块故障定位
+  - 模拟量 32767 歧义判定
+  - 用 Trace 捕捉间歇异常
+  keywords:
+  - 在线诊断
+  - troubleshooting
+  - diagnostic buffer
+  - 诊断缓冲区
+  - fault
+  - LED
+  - DeviceStates
+  - ModuleStates
+  - time error
+  - watchdog
+  - trace
+  - RALRM
+  - AINFO
+  also_read:
+  - program-download-debug
+  - storage-firmware-maintenance
+  - communication-config
+  - realtime-scan-interrupt
+  card: cards/online-troubleshooting.md
+  frontmatter:
+    description: S7-1200 现场故障定位——CPU 亮灯/停机、诊断缓冲区解读、时间错误、模块/从站故障、模拟量歧义值时激活。场景：CPU 红灯黄灯
+      STOP 不知何故、诊断条目一堆不知先看哪、时间错误/拔插模块为何 STOP 或没 STOP、PROFINET 从站定位、32767 分不清断线还是超量程、间歇异常要
+      Trace。信号：'CPU 报警/红灯/停机/fault/STOP'、'诊断缓冲区/diagnostic buffer'、'故障定位/troubleshoot/root
+      cause'、'时间错误/watchdog'、'从站故障/DeviceStates'。不用于：下载同步、固件换卡、中断原理。
+    tags:
+    - troubleshooting
+    - diagnostics
+    - procedure
+    - critical
+  source_evidence:
+  - source_id: A5E02486685-AK
+    version_id: V4.2
+    location: ch15.1 p1483-1486；ch5.1.6 p123；ch15.10 p1497；ch9.7.1 p490；ch15.16 p1524-1527
+  promotion:
+    destination: promoted
+    gate: *id001
+    notes: '关键任务 T07、现场最高频独立意图、吸收 verified 最多（14条）、排障链完整；入选 7 个 promoted。 | 吸收 verified:
+      f10, f11, f12, f13, f16, f43, f44, f52, f53, f54, f55, f65, f66, f71'
+- capability_id: cap.s7120.storage-firmware-maintenance
+  revision: 1
+  status: active
+  slug: storage-firmware-maintenance
+  title: 存储卡、固件与出厂复位维护
+  importance: high
+  importance_rationale: 命中中重要任务 T10（恢复出厂/固件/存储卡）；遗漏后果为运行中插卡致 STOP、中途断电变砖、误格式化致卡失效；吸收
+    16 条 verified，流程不可逆需专用能力。
+  one_liner: 分清卡用途并确认 CPU 空闲后再操作；固件全程保持 24V，复位保留 IP 决策；不可逆动作须先告知并验证。
+  intents:
+  - 传送卡/程序卡/固件卡选型与制作
+  - 更新 CPU 固件
+  - 格式化存储卡
+  - 恢复出厂/复位并保留 IP
+  - 备份与恢复 CPU
+  - 忘记密码恢复访问
+  keywords:
+  - 传送卡
+  - transfer card
+  - 程序卡
+  - program card
+  - 固件更新
+  - firmware update
+  - 恢复出厂
+  - MRES
+  - retain IP
+  - 备份恢复
+  - backup restore
+  - forgot password
+  - SIMATIC memory card
+  also_read:
+  - device-replacement
+  - program-download-debug
+  - online-troubleshooting
+  card: cards/storage-firmware-maintenance.md
+  frontmatter:
+    description: S7-1200 存储卡（传送卡/程序卡/固件卡）、固件更新、出厂复位、备份恢复与忘记密码时激活。场景：多台 CPU 批量灌程序选卡型、刷固件怕变砖、卡读不出来想格式化、复位出厂怕丢
+      IP/保持性数据、备份恢复选方式、忘记密码恢复访问。信号：'传送卡/程序卡/固件卡/transfer card'、'刷固件/firmware update'、'格式化卡/card
+      not recognized'、'恢复出厂/MRES/retain IP'、'备份恢复/backup restore'、'忘记密码/forgot password'。不用于：V3→V4
+      换型、程序下载调试、运行期诊断。
+    tags:
+    - procedure
+    - troubleshooting
+    - maintenance
+    - hardware
+  source_evidence:
+  - source_id: A5E02486685-AK
+    version_id: V4.2
+    location: ch5.5 p151-165；ch15.5-15.7 p1491-1495；ch15.17 p1528-1533
+  promotion:
+    destination: promoted
+    gate: *id001
+    notes: '任务 T10、操作不可逆且独立（用户会单独提''刷固件/格式化卡/忘记密码''）、吸收 16 条 verified、触发可分；入选 7 个
+      promoted。 | 吸收 verified: f17, f18, f19, f20, f21, f22, f23, f24, f57, f58, f59,
+      f67, f68, f69, p43, p44'
+- capability_id: cap.s7120.device-replacement
+  revision: 1
+  status: active
+  slug: device-replacement
+  title: 设备更换与版本兼容检查
+  importance: high
+  importance_rationale: 命中中重要任务 T09（设备更换与备件兼容，补缺口后新增 f73）；遗漏后果为漏升 STEP7/漏改 TO/漏删 DB
+    预留区致下载失败且不可回退；流程独特、方向不可逆。
+  one_liner: 确认 V3.0→V4.2 方向不可逆并归档项目；整项目升级 STEP7 不复制粘贴；逐项核对密码/OB/TO/HMI/DB 预留区，解除保护后重编译下载。
+  intents:
+  - 用 V4.2 CPU 更换 V3.0 CPU
+  - 判断能否换型/回退
+  - 换型后编译下载失败排查
+  - 运动控制 TO 版本升级
+  - DB 预留区处理
+  - 传送卡不兼容处理
+  keywords:
+  - 设备更换
+  - replace CPU
+  - V3.0 V4.2
+  - 固件跨版本
+  - cross version
+  - TO 版本
+  - technology object version
+  - 密码映射
+  - password mapping
+  - DB 预留区
+  - rollback
+  - 回退
+  also_read:
+  - storage-firmware-maintenance
+  - power-budget-sizing
+  - technology-motion-config
+  - program-download-debug
+  card: cards/device-replacement.md
+  frontmatter:
+    description: 用 V4.2 CPU 更换 V3.0 CPU（或判断能否换型/回退）时激活。场景：现场 V3.0 CPU 要换 V4.2、误想靠固件跨大版本、换型后编译下载失败怀疑
+      STEP7 版本或复制粘贴、项目含 HMI/运动 TO/专有技术保护块、TO 版本或 DB 预留区问题、能否回退。信号：'V3.0 换 V4.2/replace
+      CPU'、'固件升级跨版本/cross version'、'换后编译下载失败'、'TO 版本/运动控制库'、'传送卡不兼容/密码映射'、'能换回去吗/rollback'。不用于：日常固件更新、常规下载、V4.0/4.1
+      直接运行。
+    tags:
+    - procedure
+    - decision
+    - maintenance
+    - compatibility
+  source_evidence:
+  - source_id: A5E02486685-AK
+    version_id: V4.2
+    location: 附录D.1 用V4.2 CPU更换V3.0 CPU p1799-1806
+  promotion:
+    destination: promoted
+    gate: *id001
+    notes: '任务 T09 补缺口后流程独立完整、方向不可逆需专门流程、触发可分性高；入选 7 个 promoted（纯订货号/端子排表走检索）。 | 吸收
+      verified: f73'
+- capability_id: cap.s7120.realtime-scan-interrupt
+  revision: 1
+  status: active
+  slug: realtime-scan-interrupt
+  title: 扫描周期、实时性与中断组态
+  importance: high
+  importance_rationale: 命中高重要任务 T03（扫描周期/中断实时性）；遗漏后果为超时误判、队列溢出、V4 可中断属性失效；吸收 17 条
+    verified，但多为机制原理、触发分散于排障/组态，被预算挤出。
+  one_liner: 用写输出→读输入→执行→通信模型估延迟；超时首次记诊断、同周期二次STOP；循环/硬件/延时中断按规则组态，DIS_AIRT/EN_AIRT
+    同链配对。
+  intents:
+  - 评估响应延迟有几个扫描周期
+  - 组态循环中断与相移
+  - 硬件中断建了不触发
+  - 延时中断与定时器
+  - 时间错误/队列溢出分析
+  - V3→V4 OB 可中断属性复核
+  keywords:
+  - 扫描周期
+  - scan cycle
+  - cycle time
+  - 循环中断
+  - cyclic interrupt
+  - SET_CINT
+  - 相移
+  - phase shift
+  - 硬件中断
+  - hardware interrupt
+  - 时间错误
+  - time error
+  - queue overflow
+  - DIS_AIRT
+  also_read:
+  - program-structure-decision
+  - data-consistency
+  - technology-motion-config
+  - online-troubleshooting
+  card: cards/realtime-scan-interrupt.md
+  frontmatter:
+    description: 评估 S7-1200 扫描周期响应延迟、组态循环/硬件/延时中断与相移、处理时间错误与队列溢出时激活。场景：估算响应有几个扫描周期、要定时执行任务选
+      OB1 还是循环中断、两个循环 OB 互相抢占、硬件中断建了却不触发、CPU 意外 STOP 查实时性根因、V3 迁 V4 复核 OB 可中断属性。信号：'扫描周期/响应延迟/scan
+      cycle/cycle time'、'循环中断/相移/SET_CINT'、'中断不触发/enable event'、'时间错误/看门狗/queue overflow'。不用于：块角色结构、多值撕裂、PID/HSC
+      工艺组态。
+    tags:
+    - decision
+    - framework
+    - real-time
+    - interrupt
+  source_evidence:
+  - source_id: A5E02486685-AK
+    version_id: V4.2
+    location: ch5.1.2 p97；ch5.1.3 p98-115；ch5.1.4 p117-118；ch9.5 p468-485
+  promotion:
+    destination: router
+    gate:
+      independent_intent: true
+      independent_contract: true
+      independent_run: true
+      independent_reuse: true
+      independent_eval: true
+    notes: '五判据全通过，但可发现入口预算（8，含1 router入口）+触发分散于排障/组态/工艺，让位于 7 个更高频独立意图；能力卡保留经来源路由入口可达。
+      | 吸收 verified: f05, f06, f07, f08, f09, f14, f15, f38, f39, f40, f41, f42, p13,
+      p14, p16, p17, p46'
+- capability_id: cap.s7120.program-download-debug
+  revision: 1
+  status: active
+  slug: program-download-debug
+  title: 程序下载、调试与在线同步
+  importance: high
+  importance_rationale: 命中高重要任务 T08（下载/调试/同步）；遗漏后果为下载失败盲目重试、现场值被覆盖、RUN 下载致意外动作；吸收
+    13 条 verified，但与在线排障触发高度竞争。
+  one_liner: 下载前判容量/I/O 兼容；在线离线不一致先比较再决定上传或覆盖；监视/修改/强制分开用；RUN 下载先评估安全并知残留行为。
+  intents:
+  - 下载失败恢复
+  - 在线/离线同步与上传
+  - 监视/修改/强制调试
+  - RUN 模式下载与风险评估
+  - DB 值快照
+  - 时间戳冲突排查
+  keywords:
+  - 下载程序
+  - download
+  - 下载失败
+  - download failed
+  - 在线离线同步
+  - upload
+  - 监视
+  - watch table
+  - 强制
+  - force value
+  - RUN 模式下载
+  - download in RUN
+  - 快照
+  - snapshot
+  - timestamp conflict
+  also_read:
+  - online-troubleshooting
+  - data-consistency
+  - storage-firmware-maintenance
+  card: cards/program-download-debug.md
+  frontmatter:
+    description: S7-1200 程序下载失败恢复、在线/离线同步上传、监视修改强制调试、RUN 模式下载与快照时激活。场景：下载失败反复重试、在线值与项目不一致不知上传还是覆盖、监视/改值/强制分不清、RUN
+      下载怕影响机器、现场值快照备份、时间戳冲突排查。信号：'下载程序/下载失败/download failed'、'在线离线不一致/同步/上传'、'监视/修改/强制/force
+      value'、'RUN 模式下载/online change'、'不重新初始化/快照/snapshot'。不用于：故障根因定位、固件换卡、换型。
+    tags:
+    - procedure
+    - debugging
+    - high
+  source_evidence:
+  - source_id: A5E02486685-AK
+    version_id: V4.2
+    location: ch7.7-7.10 p233-242；ch15.11-15.14 p1498-1521；ch15.13 p1500-1508
+  promotion:
+    destination: router
+    gate:
+      independent_intent: true
+      independent_contract: true
+      independent_run: true
+      independent_reuse: true
+      independent_eval: true
+    notes: '五判据全通过，但与 online-troubleshooting 触发高度竞争（同属在线操作），预算 8 限制下降为 router；能力卡保留，经来源路由入口可达。
+      | 吸收 verified: f32, f33, f34, f35, f36, f37, f60, f61, f62, f63, f64, f70, f72'
+- capability_id: cap.s7120.technology-motion-config
+  revision: 1
+  status: active
+  slug: technology-motion-config
+  title: 高速计数 / PID / 运动控制工艺组态
+  importance: medium
+  importance_rationale: 命中中重要任务 T06（HSC/PID/运动控制）；遗漏后果为高频漏计、PID 振荡、TO 一致性报错；吸收 8 条
+    verified，但场景较专、跨场景复用低于通用意图。
+  one_liner: 脉冲频率超扫描速率用 HSC；PID 放循环中断 OB 取恒定采样；开环用 PTO、闭环用 PROFIdrive；模拟量先 NORM_X
+    再 SCALE_X。
+  intents:
+  - 编码器漏计/高速计数
+  - 按位置触发输出
+  - PID 整定与采样
+  - 4-20mA 标定工程单位
+  - 配开环/闭环轴
+  - 运动控制 ErrorID 排查
+  keywords:
+  - 高速计数
+  - HSC
+  - encoder
+  - PID
+  - tuning
+  - 采样时间
+  - sampling time
+  - NORM_X
+  - SCALE_X
+  - 标定
+  - 运动控制
+  - motion control
+  - PTO
+  - 伺服
+  - ErrorID
+  - technology object
+  also_read:
+  - realtime-scan-interrupt
+  - data-types-addressing
+  - power-budget-sizing
+  - device-replacement
+  card: cards/technology-motion-config.md
+  frontmatter:
+    description: 组态 S7-1200 高速计数 HSC、PID 调节、运动控制轴与模拟量标定时激活。场景：编码器漏计、按位置触发输出、PID 振荡采样抖动、4-20mA
+      换算工程单位、配开环 PTO/闭环 PROFIdrive 轴数限制、运动控制启动报 ErrorID 或 TO 一致性错误。信号：'高速计数/编码器漏计/HSC'、'PID
+      整定/采样时间/tuning'、'标定/工程单位/NORM_X SCALE_X'、'运动控制/轴/PTO/servo'、'TO 一致性错误/ErrorID'。不用于：通用通信组态、中断机制、指令参数速查。
+    tags:
+    - procedure
+    - technology
+    - medium
+  source_evidence:
+  - source_id: A5E02486685-AK
+    version_id: V4.2
+    location: ch10.1 p631-648；ch10.2 p666/728/731；ch10.3 p749-871；ch5.3 p133-134
+  promotion:
+    destination: router
+    gate:
+      independent_intent: true
+      independent_contract: true
+      independent_run: true
+      independent_reuse: false
+      independent_eval: true
+    notes: '命中 T06（中重要）但场景较专、跨场景复用弱于通用意图；预算 8 限制下降为 router，能力卡保留经路由入口可达。且独立复用不足（reuse=false）。
+      | 吸收 verified: f45, f46, f47, f48, f49, p25, p26, p36'
+- capability_id: cap.s7120.data-types-addressing
+  revision: 1
+  status: active
+  slug: data-types-addressing
+  title: 数据类型与寻址规则
+  importance: medium
+  importance_rationale: 支撑任务 T02/T06 的基础规则；遗漏后果为地址编译报错、读陈旧值、溢出/精度损失；吸收 8 条 verified，但纯规则型、用户少单独提出该任务（多伴随编码）。
+  one_liner: SCL 绝对地址加 %；立即访问用 :P；按 8点/2字节分组；整数按范围选、浮点按精度选；需绝对寻址的 DB 改标准访问。
+  intents:
+  - SCL 绝对地址编译报错
+  - 读到旧值/0 值
+  - 数值溢出或浮点精度
+  - 优化 DB 无绝对地址
+  - I/O 地址分配与字节对齐
+  keywords:
+  - 寻址
+  - addressing
+  - :P
+  - 立即访问
+  - immediate I/O
+  - SCL %
+  - absolute address
+  - 浮点精度
+  - floating point precision
+  - 整数范围
+  - integer range
+  - DInt
+  - 优化访问
+  - optimized DB
+  - byte alignment
+  also_read:
+  - program-structure-decision
+  - technology-motion-config
+  card: cards/data-types-addressing.md
+  frontmatter:
+    description: 写 SCL/梯形图时确定变量类型、数值范围、地址写法与 DB 访问方式时激活。场景：绝对地址编译报错、读到的是旧值/0、数值溢出或浮点精度不对、优化
+      DB 没有绝对地址、分配 I/O 占几个字节。信号：'I0.3:P 立即读/immediate input/:P'、'SCL 绝对地址报错/% prefix'、'Real
+      精度/整数溢出/floating point precision/DInt'、'优化 DB 标准访问/optimized DB'、'地址分配/byte
+      alignment'。不用于：组织代码块结构、解决多值撕裂、查指令参数表。
+    tags:
+    - rule
+    - reference
+    - data-type
+    - medium
+  source_evidence:
+  - source_id: A5E02486685-AK
+    version_id: V4.2
+    location: ch5.2.1 p127-132；ch5.4 p137-138；ch7.3.4 p208；ch8.7 p323-325
+  promotion:
+    destination: router
+    gate:
+      independent_intent: false
+      independent_contract: true
+      independent_run: true
+      independent_reuse: true
+      independent_eval: true
+    notes: '纯规则/参考型，独立意图弱（用户很少单独提''数据类型规则''，多为编码伴随），独立评测/复用尚可；按方法论降 router，能力卡保留。
+      | 吸收 verified: p20, p21, p22, p23, p24, p27, p28, p47'
+- capability_id: cap.s7120.power-wiring-installation
+  revision: 1
+  status: active
+  slug: power-wiring-installation
+  title: 安装接线与安全兜底规范
+  importance: high
+  importance_rationale: 支撑关键任务 T01 的物理实施；遗漏后果为电气故障、意外机械动作、人身伤害；吸收 7 条 verified，但为规范清单型、用户多在安装时查阅而非单独发起任务。
+  one_liner: 环境防尘隔离留 25mm；接线前断所有电源并配独立急停；单点接地 M 共点；灯负载加浪涌限制、感性负载加抑制；拿放板卡防静电。
+  intents:
+  - 控制柜布局与散热间距
+  - 接线/接地前安全前提
+  - 灯/感性负载抑制
+  - 安装后逐条安全核对
+  keywords:
+  - 控制柜布局
+  - panel layout
+  - 25mm
+  - 散热间距
+  - clearance
+  - 断电接线
+  - LOTO
+  - 急停
+  - emergency stop
+  - 单点接地
+  - grounding
+  - 感性负载抑制
+  - inductive suppression
+  - flyback diode
+  - MOV
+  - ESD
+  also_read:
+  - power-budget-sizing
+  - device-replacement
+  card: cards/power-wiring-installation.md
+  frontmatter:
+    description: S7-1200 控制柜布局、接线、接地与安全兜底规范核对时激活。场景：规划柜内布局与散热间距、接线/接地/插拔前问安全前提、灯或感性负载要不要加抑制、安装后逐条核对电气安全。信号：'控制柜布局/25mm
+      间距/panel layout clearance'、'接线前要断电吗/LOTO/independent emergency stop'、'感性负载抑制/flyback
+      diode/MOV'、'单点接地/grounding'、'防静电/ESD'。不用于：算功率容量、写程序结构设计、查订货号。
+    tags:
+    - checklist
+    - rule
+    - safety
+    - installation
+  source_evidence:
+  - source_id: A5E02486685-AK
+    version_id: V4.2
+    location: ch4.1 p59-60；ch4.4 p81-87；ch7.1 p199
+  promotion:
+    destination: router
+    gate:
+      independent_intent: false
+      independent_contract: true
+      independent_run: true
+      independent_reuse: true
+      independent_eval: true
+    notes: '规范清单型，独立意图弱（多为安装/选型伴随查阅），但每条可核对、复用强；按方法论降 router，能力卡保留经来源路由入口可达。 | 吸收
+      verified: p01, p02, p03, p07, p08, p09, p11'
+- capability_id: cap.s7120.system-design-workflow
+  revision: 1
+  status: active
+  slug: system-design-workflow
+  title: PLC 系统设计七步流程
+  importance: medium
+  importance_rationale: 支撑任务 T01/T02 的顶层流程；遗漏后果为设计阶段漏安全回路/操作员站致返工；仅 1 条 verified（f25），一次性使用、复用低。
+  one_liner: 按分区→功能规范→安全电路→系统安全→操作员站→组态图→符号表七步走，安全回路必须前置于程序，且只覆盖正常与预期异常。
+  intents:
+  - 从零规划新设备的控制系统
+  - 担心漏安全回路或操作员站
+  - 团队要统一分区与符号表规范
+  keywords:
+  - 系统设计
+  - system design
+  - 从零设计 PLC
+  - design PLC system
+  - 功能规范
+  - functional specification
+  - 分区
+  - zoning
+  - 符号表
+  - symbol table
+  - 安全电路
+  also_read:
+  - power-budget-sizing
+  - power-wiring-installation
+  card: cards/system-design-workflow.md
+  frontmatter:
+    description: 从零规划一台机器/产线的 S7-1200 控制系统、需要完整七步设计流程时激活。场景：新设备控制系统不知先做什么、担心漏掉安全回路或操作员站、团队要统一分区与符号表规范。信号：'从零设计
+      PLC 系统/design a PLC system from scratch'、'系统设计流程/system design workflow'、'功能规范/分区/符号表/functional
+      specification/zoning'、'安全电路要不要先做'。不用于：只写程序结构、只算功率、只查安装规范——那些是单步任务。一次性流程，复用较低。
+    tags:
+    - procedure
+    - framework
+    - design
+    - medium
+  source_evidence:
+  - source_id: A5E02486685-AK
+    version_id: V4.2
+    location: ch7.1 设计PLC系统的指南 表7-1 p199-200
+  promotion:
+    destination: router
+    gate:
+      independent_intent: true
+      independent_contract: true
+      independent_run: true
+      independent_reuse: false
+      independent_eval: true
+    notes: '一次性顶层流程、复用弱（reuse=false）、仅 1 条 verified；预算 8 限制下降为 router，能力卡保留经来源路由入口可达。
+      | 吸收 verified: f25'

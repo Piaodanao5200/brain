@@ -1,0 +1,15 @@
+{
+  "skill": "storage-firmware-maintenance",
+  "version": "0.1.0",
+  "source_book": "西门子 S7-1200 系统手册 V4.2 — Siemens AG",
+  "darwin_compatible": true,
+  "test_cases": [
+    {"id": "st-01", "type": "should_trigger", "prompt": "我有 10 台 CPU 要灌同一个程序，该做传送卡还是程序卡？怎么做？", "expected_behavior": "激活 storage-firmware-maintenance，区分卡类型并给制作步骤", "notes": "正面：卡类型选择"},
+    {"id": "st-02", "type": "should_trigger", "prompt": "想给 CPU 恢复出厂设置，但怕 IP 地址和保持性数据丢了，怎么处理？", "expected_behavior": "激活，说明 MRES/复位保留 IP 决策与保持性数据影响", "notes": "正面：复位保留 IP 决策"},
+    {"id": "st-03", "type": "should_trigger", "prompt": "forgot the CPU password, how to regain access?", "expected_behavior": "激活 storage-firmware-maintenance，给密码恢复路径", "notes": "正面：英文 trigger 忘记密码"},
+    {"id": "snt-01", "type": "should_not_trigger", "prompt": "现场 V3.0 的 CPU 想换成 V4.2，项目里有运动控制 TO，怎么弄？", "expected_behavior": "不激活 storage-firmware-maintenance，应激活 device-replacement", "notes": "跨 skill 混淆诱饵：V3→V4 换型归 device-replacement"},
+    {"id": "snt-02", "type": "should_not_trigger", "prompt": "24V 电源带不动扩展模块了，能并联一个电源吗？", "expected_behavior": "不激活，应激活 power-budget-sizing", "notes": "诱饵：供电核算归 power-budget-sizing"},
+    {"id": "edge-01", "type": "edge_case", "prompt": "刷固件到一半断电了会怎样？", "expected_behavior": "激活（固件更新风险属本能力），强调全程保持 24V、不可逆动作须先告知", "notes": "边界：固件更新风险，B 段硬约束"}
+  ],
+  "minimum_pass_rate": 0.8
+}

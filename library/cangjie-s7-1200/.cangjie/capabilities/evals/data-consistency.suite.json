@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "suite_id": "suite.data-consistency",
+  "target": "data-consistency",
+  "split_seed": 42,
+  "train_ratio": 1.0,
+  "trigger_cases": [
+    {
+      "case_id": "data-consistency__st-01",
+      "prompt": "HMI 上几个相关联的值读出来对不上，好像一个更新了一个没更新，怎么解决？",
+      "expected": "should_trigger",
+      "runs": 1
+    },
+    {
+      "case_id": "data-consistency__st-02",
+      "prompt": "我给某路 AI 配了过程映像分区 PIP1，但它一直不刷新，是哪里错了？",
+      "expected": "should_trigger",
+      "runs": 1
+    },
+    {
+      "case_id": "data-consistency__st-03",
+      "prompt": "torn data between cyclic OB and interrupt OB, how to protect shared variables?",
+      "expected": "should_trigger",
+      "runs": 1
+    },
+    {
+      "case_id": "data-consistency__snt-01",
+      "prompt": "Real 类型和 DInt 类型各占几个字节？",
+      "expected": "should_not_trigger",
+      "runs": 1
+    },
+    {
+      "case_id": "data-consistency__snt-02",
+      "prompt": "PROFINET 设备名不匹配，数据交换起不来，怎么分配设备名？",
+      "expected": "sibling",
+      "runs": 1,
+      "sibling_target": "communication-config"
+    },
+    {
+      "case_id": "data-consistency__edge-01",
+      "prompt": "PROFINET 一致性数据怎么读写？",
+      "expected": "edge_case",
+      "runs": 1,
+      "edge_expect": {
+        "want_trigger": true
+      }
+    }
+  ]
+}

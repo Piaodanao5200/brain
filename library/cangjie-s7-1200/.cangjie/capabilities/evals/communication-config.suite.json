@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "suite_id": "suite.communication-config",
+  "target": "communication-config",
+  "split_seed": 42,
+  "train_ratio": 1.0,
+  "trigger_cases": [
+    {
+      "case_id": "communication-config__st-01",
+      "prompt": "项目要和几个 Modbus 从站通信，选 Modbus TCP 还是 RTU？主站从站怎么定，功能码怎么配？",
+      "expected": "should_trigger",
+      "runs": 1
+    },
+    {
+      "case_id": "communication-config__st-02",
+      "prompt": "PROFINET 设备换了个新的，数据交换起不来，是不是设备名的问题？",
+      "expected": "should_trigger",
+      "runs": 1
+    },
+    {
+      "case_id": "communication-config__st-03",
+      "prompt": "S7-1200 的 PUT/GET 访问默认是不是禁用的？怎么允许？",
+      "expected": "should_trigger",
+      "runs": 1
+    },
+    {
+      "case_id": "communication-config__snt-01",
+      "prompt": "PROFINET 从站红灯，诊断缓冲区报了个模块故障，帮我定位是哪坏了",
+      "expected": "sibling",
+      "runs": 1,
+      "sibling_target": "online-troubleshooting"
+    },
+    {
+      "case_id": "communication-config__snt-02",
+      "prompt": "CPU 的红黄 LED 分别代表什么状态？",
+      "expected": "should_not_trigger",
+      "runs": 1
+    },
+    {
+      "case_id": "communication-config__edge-01",
+      "prompt": "RS485 终端电阻要不要接，接几个？",
+      "expected": "edge_case",
+      "runs": 1,
+      "edge_expect": {
+        "want_trigger": true
+      }
+    }
+  ]
+}

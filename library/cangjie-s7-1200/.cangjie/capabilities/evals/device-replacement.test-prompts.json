@@ -1,0 +1,15 @@
+{
+  "skill": "device-replacement",
+  "version": "0.1.0",
+  "source_book": "西门子 S7-1200 系统手册 V4.2 — Siemens AG",
+  "darwin_compatible": true,
+  "test_cases": [
+    {"id": "st-01", "type": "should_trigger", "prompt": "现场有台 V3.0 的 CPU 要换成 V4.2，能不能直接刷固件升级？换完还能换回去吗？", "expected_behavior": "激活 device-replacement，明确必须换硬件、方向不可逆、先归档项目", "notes": "正面：换型方向判定"},
+    {"id": "st-02", "type": "should_trigger", "prompt": "V3.0 换成 V4.2 后编译下载失败，项目是 STEP7 V12 的，还带了运动控制 TO，怎么办？", "expected_behavior": "激活，走 STEP7 V12→V13SP1→V14 整项目升级、TO 手动升 V5.0、核对字段重命名", "notes": "正面：换型后编译失败"},
+    {"id": "st-03", "type": "should_trigger", "prompt": "replacing V3.0 CPU with V4.2, what about the DB 100-byte reserve and password mapping?", "expected_behavior": "激活 device-replacement，处理 DB 预留区归零与密码保护级别映射", "notes": "正面：英文 trigger + 具体兼容点"},
+    {"id": "snt-01", "type": "should_not_trigger", "prompt": "就是日常给 CPU 刷个新固件版本（同大版本内），注意什么？", "expected_behavior": "不激活 device-replacement，应激活 storage-firmware-maintenance", "notes": "跨 skill 混淆诱饵：常规固件更新归存储维护"},
+    {"id": "snt-02", "type": "should_not_trigger", "prompt": "CPU 亮红灯停机了，诊断缓冲区有条目，帮我定位故障", "expected_behavior": "不激活，应激活 online-troubleshooting", "notes": "诱饵：现场故障诊断归排障"},
+    {"id": "edge-01", "type": "edge_case", "prompt": "我的项目是 V4.1 的，能在 V4.2 CPU 上直接跑吗？", "expected_behavior": "激活但给出'可直接运行无需修改'的结论（B段明确 V4.0/V4.1 项目可在 V4.2 运行），不应走完整换型流程", "notes": "边界：V4.x 内部兼容，非 V3→V4 换型"}
+  ],
+  "minimum_pass_rate": 0.8
+}

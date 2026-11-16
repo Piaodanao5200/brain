@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "suite_id": "suite.storage-firmware-maintenance",
+  "target": "storage-firmware-maintenance",
+  "split_seed": 42,
+  "train_ratio": 1.0,
+  "trigger_cases": [
+    {
+      "case_id": "storage-firmware-maintenance__st-01",
+      "prompt": "我有 10 台 CPU 要灌同一个程序，该做传送卡还是程序卡？怎么做？",
+      "expected": "should_trigger",
+      "runs": 1
+    },
+    {
+      "case_id": "storage-firmware-maintenance__st-02",
+      "prompt": "想给 CPU 恢复出厂设置，但怕 IP 地址和保持性数据丢了，怎么处理？",
+      "expected": "should_trigger",
+      "runs": 1
+    },
+    {
+      "case_id": "storage-firmware-maintenance__st-03",
+      "prompt": "forgot the CPU password, how to regain access?",
+      "expected": "should_trigger",
+      "runs": 1
+    },
+    {
+      "case_id": "storage-firmware-maintenance__snt-01",
+      "prompt": "现场 V3.0 的 CPU 想换成 V4.2，项目里有运动控制 TO，怎么弄？",
+      "expected": "sibling",
+      "runs": 1,
+      "sibling_target": "device-replacement"
+    },
+    {
+      "case_id": "storage-firmware-maintenance__snt-02",
+      "prompt": "24V 电源带不动扩展模块了，能并联一个电源吗？",
+      "expected": "sibling",
+      "runs": 1,
+      "sibling_target": "power-budget-sizing"
+    },
+    {
+      "case_id": "storage-firmware-maintenance__edge-01",
+      "prompt": "刷固件到一半断电了会怎样？",
+      "expected": "edge_case",
+      "runs": 1,
+      "edge_expect": {
+        "want_trigger": true
+      }
+    }
+  ]
+}

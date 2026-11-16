@@ -8,11 +8,12 @@ updated: 2026-11-16
 
 # 总索引
 
-> 由 `node bin/kb.mjs index` 自动生成，请勿手改。共 25 条有效条目。
+> 由 `node bin/kb.mjs index` 自动生成，请勿手改。共 26 条有效条目。
 > 每条格式：`id` 标题 · #标签 · 更新日期
 
-## 知识（7）
+## 知识（8）
 
+- `knowledge-20261117-aafa` cangjie 蒸馏与知识库的配合流程：三层分工、攒够判据、反哺走 update · #蒸馏 #cangjie #知识库 #skill #配合流程 #反哺 · 2026-11-17
 - `knowledge-20261116-05ba` 多 agent 共用 skill：一份实体 + 各 agent 目录挂 Junction · #约定 #skill #目录结构 #junction · 2026-11-16
 - `knowledge-20261116-4a42` git 可直接连 GitHub：TLS 走 openssl 后端，认证用 extraheader · #github #git #tls #沙箱 · 2026-11-16
 - `knowledge-20261116-734e` ego 并行只能靠多进程：同一进程内多开空间不提速 · #ego #并行 #多进程 #并发 #风控 · 2026-11-16

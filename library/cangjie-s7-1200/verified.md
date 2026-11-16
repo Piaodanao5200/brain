@@ -1140,4 +1140,49 @@
   V2_executability: {passed: true, check_mode: walkthrough, input: "ROUND(2.6)/TRUNC(2.6)/CEIL(2.2)/FLOOR(2.8)", expected: "分别为3/2/3/2；超目标范围ENO=0", observed: "按语义可算出"}
   V3_task_utility: {passed: true, expected_benefit: "明确取整语义，避免转换错误"}
   decision: verified
+
+# ===== 补缺口批次（2026-11-16 22:50，从备份快照 PDF 附录 A/B/D 重提取）=====
+# 说明：p06 原为 needs_review（缺附录数值），本批补齐 CPU/模块电流数值 + 手册算例并独立复算通过，升为 verified。
+#       f73 为附录 D 设备更换兼容决策流程，本批新增（原 T09 弱覆盖）。
+
+- id: p06
+  title: 功率预算 5V/24V 定量核算（CPU 预算值 + 模块需求查表 + 差额判定）
+  type: calculation
+  merged_from: [p06]
+  task_ids: [T01]
+  source_evidence:
+    - {source_id: A5E02486685-AK, location: "附录B 计算功率预算 p1779-1782（表B-1算例/表B-2模板）"}
+    - {source_id: A5E02486685-AK, location: "附录A 各CPU可用电流 p1549/1567/1584/1601/1620"}
+  inputs: "CPU 型号；扩展模块清单(SM/CM/SB)及其5V需求；24V负载点数(数字量输入4mA/点、继电器线圈11mA/点)"
+  formula: "5V差额 = CPU的5V预算 − Σ模块5V需求；24V差额 = CPU的24V传感器预算 − Σ(输入点×4mA + 继电器线圈×11mA)。差额<0 即超预算"
+  units: mA
+  output: "5V/24V 各自电流差额；24V<0 时给出所需外部电源最小 mA 数"
+  V1_source_sufficiency: {passed: true, reason: "附录B表B-1给出完整算例（CPU1214C:5V1600/24V400mA，模块逐项需求）与表B-2空白模板；附录A给出5种CPU预算值；数值口径统一为mA，5V/24V分列。原文已存档 appendix-source.md。"}
+  V2_executability: {passed: true, check_mode: walkthrough, input: "手册算例：CPU1214C AC/DC/Rly + SB1223 + CM1241 + 3×SM1223 + SM1221，48入36出", expected: "5V=50+220+3×145+105=810mA，差额1600−810=790mA(充足)；24V=56+8+96+264+32=456mA，差额400−456=−56mA(缺56mA)，须加≥56mA外部24V电源", observed: "独立复算与手册表B-1数值逐项一致（见 appendix-source.md 复算校验）"}
+  V3_task_utility: {passed: true, expected_benefit: "使 T01 从定性决策升级为可独立定量核算：给定组态即可算出两路余量、判定是否需外部电源及其最小容量，杜绝凭经验估算"}
+  boundary: "外部24V电源不得与CPU传感器电源并联（双电源冲突致运行不确定）；所有非隔离M端子须接同一参考电位；内部继电器线圈功率已计入CPU预算，不重复计算；更多模块型号需求须回附录A逐查（reference-tables.md仅列算例值）"
+  decision: verified
+
+- id: f73
+  title: V3.0→V4.2 CPU 设备更换决策与兼容检查流程
+  type: procedure
+  merged_from: [f73]
+  task_ids: [T09]
+  source_evidence:
+    - {source_id: A5E02486685-AK, location: "附录D.1 用V4.2 CPU更换V3.0 CPU p1799-1806"}
+  inputs: "现有V3.0项目及STEP7版本；待换CPU/模块；是否含HMI/运动控制TO/专有技术保护块/自定义Web页"
+  steps:
+    - "确认方向：仅支持 V3.0→V4.2 硬件更换，不可固件升级；下载组态后 V4.2 不可换回 V3.0；更换前先归档 V3.0 项目"
+    - "升级项目：STEP7 V11/V12 先升 V13 SP1 再升 V14；禁止从旧版直接复制粘贴程序逻辑，须整项目升级后编辑"
+    - "核对兼容项：密码保护级别映射；OB 中断属性(V3默认不可中断)；传送卡不兼容须重建V4.2卡；GET/PUT默认启用"
+    - "运动控制：V1/V2库由编译替换为V3指令；TO版本不自动升级须手动选V5.0；核对轴参数字段重命名与指令(RDREC/WRREC/CONV)变化"
+    - "HMI：重新编译项目、下载CPU与HMI、按需更新HMI固件"
+    - "DB预留区：V4.0+每DB增100字节预留；下载前在 选项>设置>PLC编程>常规 将预留设0；已换设备则逐DB属性删除"
+    - "解除专有技术/序列号复制保护→重新编译全部程序块→纠正所有错误→下载；OEM保护块须索取V4.2版本"
+  outputs: "完成可下载的V4.2项目；更换后不可回退（下载前可撤消）"
+  V1_source_sufficiency: {passed: true, reason: "附录D.1 p1799-1806 给出完整更换条件、方向约束、STEP7升级路径、密码映射表、运动控制版本表、DB预留区步骤、重新编译要求，步骤与边界完整，原文存档 appendix-source.md"}
+  V2_executability: {passed: true, check_mode: walkthrough, input: "某V3.0项目(STEP7 V12)含HMI+运动控制V3.0 TO+专有技术保护块，需换V4.2", expected: "先V12→V13SP1→V14整项目升级；核对密码映射与OB属性；TO手动升V5.0并处理字段重命名；HMI重编译下载；解除专有技术保护后重编译全部块；下载前可撤消、下载后不可回退", observed: "按7步流程可覆盖全部兼容点并得出正确顺序"}
+  V3_task_utility: {passed: true, expected_benefit: "把散落附录D的十几处兼容约束固化为有序检查清单，防止漏升STEP7/漏改TO版本/漏删DB预留区/误以为可回退等导致下载失败或运行异常"}
+  boundary: "方向不可逆（下载后无法V4.2换回V3.0）；V3.0传送卡不可用；V4.0/V4.1项目可在V4.2直接运行无需修改；纯订货号/端子排套件表走检索(reference-tables.md)不在此流程"
+  decision: verified
 ```

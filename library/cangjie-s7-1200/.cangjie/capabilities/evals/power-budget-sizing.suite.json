@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "suite_id": "suite.power-budget-sizing",
+  "target": "power-budget-sizing",
+  "split_seed": 42,
+  "train_ratio": 1.0,
+  "trigger_cases": [
+    {
+      "case_id": "power-budget-sizing__st-01",
+      "prompt": "我用的是 1214C，想带 3 个 SM1223 和 1 个 CM1241，还有一个 SB1223，帮我算算 5V 和 24V 电流够不够，要不要加外部电源？",
+      "expected": "should_trigger",
+      "runs": 1
+    },
+    {
+      "case_id": "power-budget-sizing__st-02",
+      "prompt": "24V 传感器电源带不动所有输入了，能不能再并联一个 24V 电源一起供？",
+      "expected": "should_trigger",
+      "runs": 1
+    },
+    {
+      "case_id": "power-budget-sizing__st-03",
+      "prompt": "can this CPU power these modules? 1211C plus a few signal boards",
+      "expected": "should_trigger",
+      "runs": 1
+    },
+    {
+      "case_id": "power-budget-sizing__snt-01",
+      "prompt": "SM1223 这个模块的订货号是多少？端子几针？",
+      "expected": "should_not_trigger",
+      "runs": 1
+    },
+    {
+      "case_id": "power-budget-sizing__snt-02",
+      "prompt": "CPU 面板上 SF 红灯亮了，诊断缓冲区里有一条时间错误，帮我查什么问题",
+      "expected": "sibling",
+      "runs": 1,
+      "sibling_target": "online-troubleshooting"
+    },
+    {
+      "case_id": "power-budget-sizing__edge-01",
+      "prompt": "1214C 最多能插几个信号模块？",
+      "expected": "edge_case",
+      "runs": 1,
+      "edge_expect": {
+        "want_trigger": "any"
+      }
+    }
+  ]
+}

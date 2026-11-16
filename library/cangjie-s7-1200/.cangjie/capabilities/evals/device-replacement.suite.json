@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "suite_id": "suite.device-replacement",
+  "target": "device-replacement",
+  "split_seed": 42,
+  "train_ratio": 1.0,
+  "trigger_cases": [
+    {
+      "case_id": "device-replacement__st-01",
+      "prompt": "现场有台 V3.0 的 CPU 要换成 V4.2，能不能直接刷固件升级？换完还能换回去吗？",
+      "expected": "should_trigger",
+      "runs": 1
+    },
+    {
+      "case_id": "device-replacement__st-02",
+      "prompt": "V3.0 换成 V4.2 后编译下载失败，项目是 STEP7 V12 的，还带了运动控制 TO，怎么办？",
+      "expected": "should_trigger",
+      "runs": 1
+    },
+    {
+      "case_id": "device-replacement__st-03",
+      "prompt": "replacing V3.0 CPU with V4.2, what about the DB 100-byte reserve and password mapping?",
+      "expected": "should_trigger",
+      "runs": 1
+    },
+    {
+      "case_id": "device-replacement__snt-01",
+      "prompt": "就是日常给 CPU 刷个新固件版本（同大版本内），注意什么？",
+      "expected": "sibling",
+      "runs": 1,
+      "sibling_target": "storage-firmware-maintenance"
+    },
+    {
+      "case_id": "device-replacement__snt-02",
+      "prompt": "CPU 亮红灯停机了，诊断缓冲区有条目，帮我定位故障",
+      "expected": "sibling",
+      "runs": 1,
+      "sibling_target": "online-troubleshooting"
+    },
+    {
+      "case_id": "device-replacement__edge-01",
+      "prompt": "我的项目是 V4.1 的，能在 V4.2 CPU 上直接跑吗？",
+      "expected": "edge_case",
+      "runs": 1,
+      "edge_expect": {
+        "want_trigger": "any"
+      }
+    }
+  ]
+}
