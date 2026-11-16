@@ -15,7 +15,7 @@ brain/
 ├─ AGENTS.md                 给任何 agent 的接入说明（先读这个）
 ├─ 更新.cmd                  双击：同步 inbox → 重建索引 → 刷阅读页
 ├─ 看板.cmd                  双击：启动实时看板（可增改），自动开浏览器
-├─ 打开看板.cmd              双击：打开静态阅读页（只读快照）
+├─ push.cmd                  双击：把本地提交推到 GitHub
 │
 ├─ memory/                   记忆体
 │  ├─ vault/                 ★ 唯一真源，一条记忆一个 .md
@@ -26,6 +26,7 @@ brain/
 │  │  └─ 90-archive/         过期但保留
 │  ├─ bin/kb.mjs             命令行：bootstrap / search / new / supersede / refresh
 │  ├─ bin/render.mjs         生成阅读页
+│  ├─ bin/push.mjs           走 GitHub API 推送（本机 git push 不通时的替代方案）
 │  ├─ server/mcp-server.mjs  MCP 服务（7 个工具，stdio 与 HTTP 双模）
 │  ├─ server/ui-server.mjs   看板服务：读 API + SSE 实时推送 + 写入转交 vault.mjs
 │  ├─ ui/index.html          看板页面（单文件，无构建）
@@ -53,11 +54,40 @@ cd memory && node bin/kb.mjs refresh
 | 查记忆 | `node bin/kb.mjs search "关键词"` |
 | 放资料 | 丢进 `library/inbox/`，然后 `更新.cmd` |
 | 查资料原文 | `python library/bin/kb.py search "关键词"`（带出处页码） |
-| 看全部（静态快照） | 双击 `打开看板.cmd` |
+| 看全部（静态快照） | `cd memory && node bin/render.mjs`，然后打开 `memory/reading/index.html`（`更新.cmd` 会自动做并打开） |
 | 实时看 + 直接改 | 双击 `看板.cmd`，或 `node bin/kb.mjs ui`，浏览器开 http://127.0.0.1:8788 |
 | 今天变了什么 | `node bin/kb.mjs daily` |
 
-## 设计取舍
+## 推送到 GitHub
+
+本机的 `git push` 在本网络下不通（`github.com:443` 的 TLS 握手被中断），但 `api.github.com`
+正常。所以推送走 REST API：**blob → tree → commit → 移动分支指针**，由 `memory/bin/push.mjs` 完成。
+
+```bash
+# 推送当前仓库
+node memory/bin/push.mjs
+
+# 推别的仓库（脚本通用，不绑定本目录）
+node memory/bin/push.mjs --repo "D:/collaborative project/skills"
+
+# 先看看会推什么，不动远程
+node memory/bin/push.mjs --dry-run
+```
+
+或者双击 `push.cmd`。
+
+几个要点：
+
+- **历史是累积的，不是覆盖的**。新提交接在远程当前 tip 之后，父节点正确传下去，
+  所以仓库里能一条条往回看，`git revert <sha>` 能一步撤销。
+- **SHA 与本地一致**。提交的 author / committer / 时间 / 树全部照抄本地对象，
+  重放出来的 SHA 与本地相同，所以 `git status` 会如实显示 `main...origin/main`（没有 ahead）。
+- **只传变化的部分**。blob / tree 的映射缓存在 `.git/remote-cache.json`，
+  第二次推送通常只传个位数对象。
+- **`--reset` 慎用**。它丢弃远程独有的历史、按本地历史强推指针，只用于远程历史本身是
+  假的时候（例如早期脚本用空父提交推上去的那种）。正常场景一律不带这个参数。
+
+
 
 - **Markdown 是唯一真源**，没有向量库。检索用 BM25 + 中文二元切分，本地毫秒级，不需 API key。
 - **不物理删除**。事实变更走 `supersede`，旧条目保留为 `superseded` 并指向新条目——「我们以前相信什么」本身是信息。

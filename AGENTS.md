@@ -179,6 +179,22 @@ node "D:\collaborative project\brain\memory\bin\kb.mjs" search "向量库" -k 3
 | `8787` 端口被占用 | 换端口 `set PORT=8790 && node server/mcp-server.mjs` |
 | 写了但检索不到 | 没重建索引，跑 `node bin/kb.mjs index` |
 
+## 同步到 GitHub
+
+本机 `git push` 在本网络下不通（`github.com:443` TLS 被中断），**不要反复重试 git push**，
+用 API 推送脚本：
+
+```bash
+node "D:\collaborative project\brain\memory\bin\push.mjs" --repo <仓库路径>
+```
+
+行为：把本地未推送的提交逐个重放到远程，新提交接在远程 tip 之后（历史累积、可 `git revert`）；
+author / committer / 时间照抄本地，所以重放出的 SHA 与本地一致，`git status` 不会误报领先。
+blob / tree 映射缓存于 `.git/remote-cache.json`，二次推送只传变化部分。
+
+- **不要**自己写 curl 拼 `POST /git/commits`：父节点传错就会把远程历史抹成一条（这个坑踩过）。
+- 只有远程历史本身是伪造的时候才加 `--reset`（强推指针、以本地为准）。
+
 ## 别做的事
 
 - **不要手改 `vault/00-index/INDEX.md`**，它是自动生成的，下次跑 `index` 会被覆盖。
