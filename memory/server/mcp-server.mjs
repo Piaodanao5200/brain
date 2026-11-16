@@ -14,7 +14,7 @@
  */
 import http from "node:http";
 import { createInterface } from "node:readline";
-import { VAULT, search, read, writeEntry, supersede, scan, buildIndex, rules, recent, rebuildIndex } from "./lib/vault.mjs";
+import { VAULT, search, read, writeEntry, supersede, scan, buildIndex, rules, recent, rebuildIndex, dailyDigest } from "./lib/vault.mjs";
 
 const VERSION = "1.0.0";
 const READONLY = process.env.KB_READONLY === "1";
@@ -102,6 +102,17 @@ const TOOLS = [
       },
     },
   },
+  {
+    name: "kb_daily",
+    description: "按天汇总记忆体变化：新增（created=当天）、更新（当天改过正文/标题）、作废（当天被 supersede）。用户问「今天/昨天/某天记了什么」时用这个，比 kb_recent 更准。",
+    inputSchema: {
+      type: "object",
+      properties: {
+        date: { type: "string", description: "YYYY-MM-DD，省略为今天" },
+        type: { type: "string", description: "只看某一类型：knowledge / decision / fact / pitfall / todo / note / session" },
+      },
+    },
+  },
 ];
 
 /* ---------------- 格式化 ---------------- */
@@ -185,6 +196,26 @@ function runTool(name, args = {}) {
       const list = recent(Number(args.days) || 14, Number(args.limit) || 15);
       if (!list.length) return "该时间窗口内没有变更。";
       return list.map((e) => `- ${e.id} | [${e.type}] ${e.title} | ${fmtDate(e.updated)}`).join("\n");
+    }
+    case "kb_daily": {
+      const dig = dailyDigest(args.date);
+      const typeFilter = args.type ? String(args.type).trim() : "";
+      const keep = (e) => !typeFilter || e.type === typeFilter;
+      const added = dig.added.filter(keep);
+      const changed = dig.changed.filter(keep);
+      const retired = dig.retired.filter(keep);
+      const lines = [`${dig.date} · 新增 ${added.length} · 更新 ${changed.length} · 作废 ${retired.length}`];
+      const block = (label, list) => {
+        if (!list.length) return;
+        lines.push("", `【${label}】`);
+        for (const e of list) lines.push(`- ${e.id} | [${e.type}] ${e.title} | ${fmtDate(e.updated)}`);
+      };
+      block("新增", added);
+      block("更新", changed);
+      block("作废", retired);
+      if (!added.length && !changed.length && !retired.length) lines.push("", "这一天没有变化。");
+      lines.push("", "需要全文用 kb_read(id)；判断某条是否仍成立，先看 status 是否 superseded。");
+      return lines.join("\n");
     }
     case "kb_write":
     case "kb_supersede": {

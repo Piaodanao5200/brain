@@ -19,6 +19,9 @@ tmp/
 deploy/.env
 *.local
 
+# ---- 演示截图：只是临时留证，体积大且随时可重截，不入仓 ----
+docs/screenshots/
+
 # ---- 系统与编辑器 ----
 .DS_Store
 Thumbs.db

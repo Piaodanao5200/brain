@@ -3,7 +3,7 @@
 本地知识库与记忆体。`vault/` 里每个 `.md` 文件是一条记忆，一个零依赖 MCP 服务把它暴露给任何 agent——Claude Code、Cursor、Codex、ChatGPT 连的是同一份数据。
 
 - **你能实时看**：就是普通 Markdown 文件夹，Obsidian / VS Code / 记事本随便改，改完立刻生效，没有"同步"这一步。
-- **agent 能读写**：MCP 工具 `kb_search` / `kb_read` / `kb_write` / `kb_supersede`。
+- **agent 能读写**：MCP 工具 `kb_search` / `kb_read` / `kb_write` / `kb_supersede` / `kb_daily`（按天汇总）。
 - **新会话自动检索**：三层机制，从"强行注入索引"到"按提问精准召回"，见下文。
 - **能上云**：同一个进程加 `--stdio` 就是本地工具，不加就是 HTTP 服务，反代后任何远程 agent 都能连。
 
@@ -20,13 +20,15 @@ ChatGPT ─── HTTPS ─────┘        └── 写入前查重 → 
 不需要 `npm install`，Node 18+ 即可。
 
 ```bash
-cd D:/collaborative project/brain/memory
+cd "D:/collaborative project/brain/memory"
 
 node bin/kb.mjs index          # 重建索引
 node bin/kb.mjs refresh        # 一键更新：inbox 入库 → 导出投影 → 重建索引 → 刷阅读页
 node bin/kb.mjs bootstrap      # 看看库里有什么
 node bin/kb.mjs search "冲突"   # 检索
 node bin/kb.mjs stats          # 统计
+node bin/kb.mjs ui             # 启动看板：实时监看 + 直接增改（http://127.0.0.1:8788）
+node bin/kb.mjs daily          # 今日新增 / 更新 / 作废
 ```
 
 **人工查看与更新**两种方式，随你：
@@ -41,7 +43,7 @@ node bin/kb.mjs stats          # 统计
 ### 1. Claude Code（stdio，最稳）
 
 ```bash
-claude mcp add kb -- node D:/collaborative project/brain/memory/server/mcp-server.mjs --stdio
+claude mcp add kb -- node "D:/collaborative project/brain/memory/server/mcp-server.mjs" --stdio
 ```
 
 ### 2. Cursor
@@ -164,7 +166,7 @@ PORT=8787 KB_TOKEN=<你的令牌> node server/mcp-server.mjs
 ## 上云
 
 ```bash
-cd D:/collaborative project/brain/memory/deploy
+cd "D:/collaborative project/brain/memory"/deploy
 cp .env.example .env
 node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"   # 生成令牌填进 .env
 # 填好 KB_DOMAIN 与 KB_TOKEN 后

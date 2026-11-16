@@ -14,7 +14,8 @@
 brain/
 ├─ AGENTS.md                 给任何 agent 的接入说明（先读这个）
 ├─ 更新.cmd                  双击：同步 inbox → 重建索引 → 刷阅读页
-├─ 打开看板.cmd              双击：打开阅读页
+├─ 看板.cmd                  双击：启动实时看板（可增改），自动开浏览器
+├─ 打开看板.cmd              双击：打开静态阅读页（只读快照）
 │
 ├─ memory/                   记忆体
 │  ├─ vault/                 ★ 唯一真源，一条记忆一个 .md
@@ -25,7 +26,9 @@ brain/
 │  │  └─ 90-archive/         过期但保留
 │  ├─ bin/kb.mjs             命令行：bootstrap / search / new / supersede / refresh
 │  ├─ bin/render.mjs         生成阅读页
-│  ├─ server/mcp-server.mjs  MCP 服务（6 个工具，stdio 与 HTTP 双模）
+│  ├─ server/mcp-server.mjs  MCP 服务（7 个工具，stdio 与 HTTP 双模）
+│  ├─ server/ui-server.mjs   看板服务：读 API + SSE 实时推送 + 写入转交 vault.mjs
+│  ├─ ui/index.html          看板页面（单文件，无构建）
 │  └─ hooks/                 WorkBuddy 会话启动时自动注入相关记忆
 │
 └─ library/                  知识库
@@ -50,7 +53,9 @@ cd memory && node bin/kb.mjs refresh
 | 查记忆 | `node bin/kb.mjs search "关键词"` |
 | 放资料 | 丢进 `library/inbox/`，然后 `更新.cmd` |
 | 查资料原文 | `python library/bin/kb.py search "关键词"`（带出处页码） |
-| 看全部 | 双击 `打开看板.cmd` |
+| 看全部（静态快照） | 双击 `打开看板.cmd` |
+| 实时看 + 直接改 | 双击 `看板.cmd`，或 `node bin/kb.mjs ui`，浏览器开 http://127.0.0.1:8788 |
+| 今天变了什么 | `node bin/kb.mjs daily` |
 
 ## 设计取舍
 

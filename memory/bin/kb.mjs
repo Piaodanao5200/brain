@@ -16,7 +16,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { VAULT, scan, search, read, writeEntry, supersede, buildIndex, rebuildIndex, recent } from "../server/lib/vault.mjs";
+import { VAULT, scan, search, read, writeEntry, supersede, buildIndex, rebuildIndex, recent, dailyDigest } from "../server/lib/vault.mjs";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 
@@ -322,6 +322,29 @@ switch (cmd) {
     break;
   }
 
+  case "ui": {
+    const uiPort = args.port || process.env.KB_UI_PORT || 8788;
+    process.env.KB_UI_PORT = String(uiPort);
+    await import("../server/ui-server.mjs");
+    break;
+  }
+
+  case "daily": {
+    const dig = dailyDigest(args.date);
+    const added = dig.added, changed = dig.changed, retired = dig.retired;
+    console.log(C.b(`今日 ${dig.date}`) + C.dim(`  新增 ${added.length} · 更新 ${changed.length} · 作废 ${retired.length}`));
+    const show = (label, list) => {
+      if (!list.length) return;
+      console.log(C.c(label));
+      for (const e of list) console.log(`  ${C.g(e.id)}  ${e.title}`);
+    };
+    show("新增", added);
+    show("更新", changed);
+    show("作废", retired);
+    if (!added.length && !changed.length && !retired.length) console.log(C.dim("今天还没有变化。"));
+    break;
+  }
+
   case "help":
   case "--help":
   case "-h":
@@ -336,6 +359,8 @@ switch (cmd) {
   ${C.c("index")}                  重建 INDEX.md
   ${C.c("refresh")}                一键更新：inbox 入库 → 导出投影 → 重建索引 → 刷页面
                                    （--library <目录> 或 KB_LIBRARY 指定知识库位置）
+  ${C.c("ui")} [--port 8788]        打开本地看板：实时监看 + 直接增改
+  ${C.c("daily")}                   今日新增 / 更新 / 作废
   ${C.c("recent")} [--days 7]      最近变更
   ${C.c("stats")}                  统计
   ${C.c("lint")}                   漂移 / 密钥 / 字段完整性检查

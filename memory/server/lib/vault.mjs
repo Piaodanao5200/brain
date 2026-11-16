@@ -148,6 +148,7 @@ export function scan() {
       valid_from: fm.valid_from || "",
       supersedes: Array.isArray(fm.supersedes) ? fm.supersedes : (fm.supersedes ? [fm.supersedes] : []),
       status: fm.status || "active",
+      superseded_by: fm.superseded_by || "",
       confidence: fm.confidence === "" || fm.confidence === undefined ? null : Number(fm.confidence),
       source: fm.source || "",
       body,
@@ -182,6 +183,29 @@ function iso(d) {
   } catch {
     return "";
   }
+}
+
+/* ---------------- 按天汇总 ---------------- */
+
+function localDay(ms) {
+  const d = new Date(ms);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+/**
+ * 某一天发生了什么：哪些是当天新增、哪些是当天改的、哪些被作废。
+ * 三个入口（看板 / CLI daily / MCP kb_daily）共用这一个实现，避免三套口径对不上。
+ */
+export function dailyDigest(dateStr) {
+  const day = String(dateStr || "").trim() || localDay(Date.now());
+  const all = scan().filter((e) => e.type !== "index");
+  const isActive = (e) => e.status === "active" || e.status === "canonical";
+  const dayOf = (e) => (e.created ? e.created : e.mtime ? localDay(e.mtime) : "");
+  const active = all.filter(isActive);
+  const added = active.filter((e) => dayOf(e) === day);
+  const changed = active.filter((e) => dayOf(e) !== day && e.updated === day);
+  const retired = all.filter((e) => e.status === "superseded" && e.updated === day);
+  return { date: day, added, changed, retired, counts: { added: added.length, changed: changed.length, retired: retired.length } };
 }
 
 /* ---------------- 检索：BM25 ---------------- */
@@ -314,7 +338,7 @@ function snippetFor(e, qset) {
 
 /* ---------------- 写入 ---------------- */
 
-function sanitizeName(s) {
+export function sanitizeName(s) {
   return String(s).replace(/[\\/:*?"<>|\r\n\t]/g, " ").replace(/\s+/g, "-").slice(0, 48) || "untitled";
 }
 
@@ -413,6 +437,65 @@ export function supersede(id, patch = {}) {
     force: true,
   });
   return r;
+}
+
+/**
+ * 原地修改一条记忆：只改你给的字段，id 与 created 保持不变，updated 记为今天。
+ * 语义变更（结论变了）应当走 supersede，不要用这个函数覆盖历史。
+ */
+export function updateEntry(idOrRel, patch = {}) {
+  const e = scan().find((x) => x.id === idOrRel || x.rel === idOrRel);
+  if (!e) throw new Error(`找不到条目 ${idOrRel}`);
+
+  const { fm, body: oldBody } = parseFrontmatter(fs.readFileSync(e.file, "utf8"));
+  let body = oldBody;
+  const today = new Date();
+
+  if (patch.title !== undefined) {
+    const t = String(patch.title).trim();
+    if (!t) throw new Error("标题不能为空");
+    fm.title = t;
+  }
+  if (patch.body !== undefined) {
+    const b = String(patch.body).trim();
+    if (!b) throw new Error("正文不能为空");
+    body = b;
+  }
+  if (patch.tags !== undefined) {
+    fm.tags = Array.isArray(patch.tags)
+      ? patch.tags
+      : String(patch.tags || "").split(/[,，\s]+/).filter(Boolean);
+  }
+  if (patch.status !== undefined) {
+    const ok = ["active", "canonical", "superseded", "archived", "draft"];
+    if (!ok.includes(patch.status)) throw new Error(`status 只能是 ${ok.join(" / ")}`);
+    fm.status = patch.status;
+  }
+  if (patch.confidence !== undefined && patch.confidence !== null && patch.confidence !== "") {
+    const c = Number(patch.confidence);
+    if (Number.isNaN(c) || c < 0 || c > 1) throw new Error("confidence 要在 0 到 1 之间");
+    fm.confidence = c;
+  }
+  if (patch.source !== undefined) fm.source = String(patch.source);
+  if (patch.scope !== undefined) fm.scope = String(patch.scope);
+
+  fm.updated = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+
+  let file = e.file;
+  let renamed = false;
+  if (patch.title !== undefined) {
+    const dir = path.dirname(e.file);
+    const target = path.join(dir, `${fm.id}-${sanitizeName(fm.title)}.md`);
+    if (target !== e.file && !fs.existsSync(target)) {
+      file = target;
+      renamed = true;
+    }
+  }
+
+  fs.writeFileSync(file, stringifyFrontmatter(fm, body), "utf8");
+  if (renamed) fs.unlinkSync(e.file);
+  rebuildIndex();
+  return { id: fm.id, file, rel: path.relative(VAULT, file), renamed };
 }
 
 /* ---------------- 索引 ---------------- */

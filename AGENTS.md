@@ -30,7 +30,7 @@ vault/90-archive/   过期但保留
 ### A. MCP（推荐，能读能写）
 
 服务是零依赖的 Node 脚本，stdio 模式，工具共 6 个：
-`kb_bootstrap` `kb_search` `kb_read` `kb_write` `kb_supersede` `kb_recent`
+`kb_bootstrap` `kb_search` `kb_read` `kb_write` `kb_supersede` `kb_recent` `kb_daily`
 
 **Cursor**（`.cursor/mcp.json`，项目级或全局 `~/.cursor/mcp.json`）：
 
@@ -76,6 +76,7 @@ node "D:\collaborative project\brain\memory\bin\kb.mjs" search "关键词" -k 5
 node "D:\collaborative project\brain\memory\bin\kb.mjs" read <id>
 node "D:\collaborative project\brain\memory\bin\kb.mjs" new --type decision --title "…" --body "…" --tags a,b --source "…"
 node "D:\collaborative project\brain\memory\bin\kb.mjs" bootstrap          # 会话启动看全局
+node "D:\collaborative project\brain\memory\bin\kb.mjs" daily              # 今天新增/更新/作废
 ```
 
 查知识库（另一套工具，Python）：

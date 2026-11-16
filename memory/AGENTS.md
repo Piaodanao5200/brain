@@ -27,7 +27,7 @@ vault/00-index/        RULES.md（规则）与 INDEX.md（自动生成的索引�
 
 | 方式 | 用法 |
 |---|---|
-| MCP（推荐） | 工具：`kb_bootstrap` `kb_search` `kb_read` `kb_write` `kb_supersede` `kb_recent` |
+| MCP（推荐） | 工具：`kb_bootstrap` `kb_search` `kb_read` `kb_write` `kb_supersede` `kb_recent` `kb_daily` |
 | 本地 HTTP | `http://localhost:8787/mcp`（Streamable HTTP，无状态） |
 | 云端 | 环境变量 `KB_REMOTE` 指向的地址，鉴权用 `Authorization: Bearer $KB_TOKEN` |
 | 命令行 | `node bin/kb.mjs search "关键词"` / `read` / `new` / `supersede` / `lint` |
