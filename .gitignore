@@ -22,6 +22,11 @@ deploy/.env
 # ---- 演示截图：只是临时留证，体积大且随时可重截，不入仓 ----
 docs/screenshots/
 
+# ---- 蒸馏工作区：cangjie 的中间产物（candidates/evals/runs），一次上百 MB。
+#      最终成果（dist/ 里的 skill 本体）安装到各 agent 技能目录，工作区跑完即删 ----
+library/cangjie-*/
+library/books/
+
 # ---- 系统与编辑器 ----
 .DS_Store
 Thumbs.db
