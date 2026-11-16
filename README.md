@@ -34,9 +34,11 @@ brain/
 │
 └─ library/                  知识库
    ├─ inbox/                 ★ 投递口，丢文件进来
-   ├─ sources/               原件归档（pdf / md / image / audio / video）
-   ├─ bin/kb.py              命令行：add / sync / search / export-md
-   └─ reading/               人读投影（生成物）
+   ├─ sources/               原件归档（pdf / docx / pptx / xlsx / md / image / audio / video）
+   ├─ markdown/              ★ 每个原件的 markdown 版，入库时自动生成，入 git
+   ├─ bin/kb.py              命令行：add / sync / search / md / export-md
+   ├─ bin/md_export.py       按格式分派转换引擎，产出 markdown/
+   └─ reading/               检索投影，带出处锚点（生成物）
 ```
 
 ## 日常用法
@@ -53,6 +55,7 @@ cd memory && node bin/kb.mjs refresh
 | 记一件事 | 告诉 agent，或 `node bin/kb.mjs new --type decision --title "…" --body "…"` |
 | 查记忆 | `node bin/kb.mjs search "关键词"` |
 | 放资料 | 丢进 `library/inbox/`，然后 `更新.cmd` |
+| 读某篇原文 | 开 `library/markdown/<id>-<标题>.md`，或丢给 agent 读这个路径 |
 | 查资料原文 | `python library/bin/kb.py search "关键词"`（带出处页码） |
 | 看全部（静态快照） | `cd memory && node bin/render.mjs`，然后打开 `memory/reading/index.html`（`更新.cmd` 会自动做并打开） |
 | 实时看 + 直接改 | 双击 `看板.cmd`，或 `node bin/kb.mjs ui`，浏览器开 http://127.0.0.1:8788 |

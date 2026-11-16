@@ -52,13 +52,17 @@ python bin/kb.py show md-73a4db4ff9         # 看某篇的章节结构
 | 格式 | 状态 | 怎么处理 |
 |---|---|---|
 | `.md` `.txt` | ✅ | 直接读，保留标题层级 |
-| `.html` `.htm` | ✅ | 抽正文，丢 script/style/nav |
-| `.pdf`（有文字层） | ✅ | pypdf 抽文本，按页记页码 |
+| `.html` `.htm` | ✅ | markitdown 转 md，保留结构（失败退回自带抽取器） |
+| `.pdf`（有文字层） | ✅ | pypdf 抽文本切块；`markdown/` 那份用 pymupdf4llm 转，保留标题与表格 |
 | `.pdf`（扫描件） | ✅ | 自动判定无文字层 → 渲染成图 → OCR，页码保留 |
+| `.docx` | ✅ | markitdown（mammoth）转 md，标题/列表/表格都在 |
+| `.pptx` `.ppt` | ✅ | markitdown，按幻灯片分节 |
+| `.xlsx` `.xls` `.csv` | ✅ | markitdown，表格转 md 表 |
 | 图片 `png jpg webp bmp tiff` | ✅ | OCR 出文字，原图归档，投影里嵌入 |
 | 视频 `mp4 mov mkv avi webm` | ✅ | 抽帧 OCR（带时间点）+ 语音转写 |
 | 音频 `mp3 wav m4a flac` | ✅ | 语音转写 |
-| `.docx` | ⚠️ | 识别扩展名但未实现解析，需加 `python-docx` |
+
+旧版 `.doc` / `.ppt`（二进制格式）和加密 PDF 会在入箱阶段报错并留在 `inbox/`，不会入库。
 
 ## 扫描件、图片、视频怎么进来
 
@@ -81,10 +85,15 @@ python bin/kb.py add "扫描件.pdf" --dpi 300            # 小字/表格调高�
 
 ```bash
 python -m pip install rapidocr-onnxruntime   # 图片与扫描件 OCR，离线，不装外部程序
-python -m pip install pymupdf                # 扫描件渲染
+python -m pip install pymupdf pymupdf4llm    # 扫描件渲染 + PDF 转 markdown
+python -m pip install "markitdown[docx,pptx,xlsx]"   # Office 文档转 markdown
 python -m pip install imageio-ffmpeg         # 视频抽帧与音频提取（自带 ffmpeg）
 python -m pip install faster-whisper         # 语音转写，可选
 ```
+
+`markitdown` 只装 `docx,pptx,xlsx` 三个 extras，**不要装 `[all]`**——那会拉进 Azure SDK
+等几百 MB 的东西，而本机方案（PDF 用 pymupdf4llm、OCR 用 rapidocr、音频用
+faster-whisper）在中文场景下都比它强。
 
 语音模型默认 `base`，中文准确率一般；`KB_WHISPER=small` 更准但慢 2–3 倍。**有字幕文件就不用装它。**
 
@@ -94,13 +103,45 @@ python -m pip install faster-whisper         # 语音转写，可选
 2. **视频只取"文字"，不取"画面理解"。** 抽帧读的是画面里的文字（PPT、字幕、屏幕内容），不理解人物动作场景。既没字幕也没口播的视频，进来是空的。
 3. **耗时按分钟计。** 100 页扫描件约 2–3 分钟；1 小时视频（10 秒一帧 = 360 帧）约 5–8 分钟。跑的时候别关窗口。
 
-## 给人读的投影：export-md
+## 原文 markdown：markdown/
+
+每个进库的文件都会产出一份对应的 `.md`，放在 `markdown/`。入库时自动生成，不用额外跑命令。
+
+```bash
+python bin/kb.py md            # 补上历史遗留的缺失（默认只补缺的，不动已有的）
+python bin/kb.py md --all      # 全量重转，覆盖现有的
+python bin/kb.py md --retry    # 只重试上次失败的
+python bin/kb.py md --doc pdf-ab12cd34ef   # 单篇
+```
+
+引擎按格式分派，不是一把梭：
+
+| 输入 | 引擎 | 为什么是它 |
+|---|---|---|
+| PDF 有文字层 | `pymupdf4llm` | 保留标题层级与表格。markitdown 的 PDF 走 pdfminer，只出纯文本 |
+| PDF 扫描件 / 图片 | 已有分块（OCR） | 文字本来就是 OCR 出来的，直接拼，保证「搜到的」和「看到的」是同一份 |
+| 视频 / 音频 | 已有分块（字幕或转写） | 同上，不重复转一遍 |
+| docx / pptx / xlsx / csv | `markitdown` | 本机没有更合适的 |
+| html | `markitdown` | 保留结构，失败退回自带抽取器 |
+| md / txt | `native` | 原样搬运 |
+
+**`partial` 是什么意思**：这份 md 的文字来自 OCR 或语音转写，没有版面结构（标题、表格都是猜的），
+识别也可能有错。frontmatter 里会写 `engine: ocr-asr` 和一行提醒。引用前核对原件。
+
+**不要手改 `markdown/` 里的文件。** 它是派生物，`kb.py md --all` 会按原件重转、直接覆盖。
+要改内容请改原件重新转，或把改好的 md 当新文件丢进 `inbox/` 入库。
+
+## 检索投影：export-md
 
 ```bash
 python bin/kb.py export-md
 ```
 
 生成 `reading/`，每篇一个 Markdown，带 frontmatter、分段锚点、出处行。用 Obsidian 打开这个目录就能读、能双链、能 git diff。
+
+**和 `markdown/` 的区别**：`markdown/` 是原文的干净版本，用来读和留给 agent 全文读；
+`reading/` 是从检索分块拼出来的，每段后面挂一行「出处：第 N 页」和锚点，用来核对
+「这条结论是从哪一段来的」。两个都要，各管一件事。
 
 **投影是从索引重新生成的**，你在 `reading/` 里手改的内容下次导出会被覆盖。要改就改原文再重建。已删除文档的旧投影会自动清掉，不会在 Obsidian 里留下僵尸条目。
 
@@ -146,9 +187,11 @@ SQLite FTS5 自带的分词器切不开中文（整句会当成一个词），�
 ## 目录
 
 ```
-sources/   原文归档（md/ txt/ html/ pdf/ image/ video/ audio/）
-inbox/     待导入的临时堆放处
-reading/   人读的 Markdown 投影（export-md 生成，可删可重建）
-store.db   索引（文档表 + 片段表 + 全文索引）
-bin/kb.py  全部逻辑
+sources/      原文归档（md/ txt/ html/ pdf/ image/ video/ audio/ docx/ pptx/ xlsx/）
+inbox/        待导入的临时堆放处
+markdown/     原文的 markdown 版（入库时自动生成，可删可重建，入 git 可 diff）
+reading/      检索投影，带出处锚点（export-md 生成，不入 git）
+store.db      索引（文档表 + 片段表 + 全文索引）
+bin/kb.py     入库、检索、导出
+bin/md_export.py  按格式分派引擎，产出 markdown/
 ```

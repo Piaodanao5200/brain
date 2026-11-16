@@ -9,9 +9,10 @@ kb.py — 专业知识库：原文归档 + 分块索引 + 出处可追溯
     python bin/kb.py show <doc_id>         看某篇的目录结构
     python bin/kb.py rm <doc_id>           移除一篇
     python bin/kb.py rebuild               从 sources/ 全量重建索引
+    python bin/kb.py md                    给每篇产出 markdown 原文（到 markdown/）
     python bin/kb.py export-md             导出人读的 Markdown 投影到 reading/
 
-支持格式：md / txt / html / docx / pdf（含扫描件，自动 OCR）
+支持格式：md / txt / html / docx / pptx / xlsx / csv / pdf（含扫描件，自动 OCR）
          图片 png jpg webp bmp tiff（OCR）
          视频 mp4 mov mkv avi webm（抽帧 OCR + 语音转写）
          音频 mp3 wav m4a flac（语音转写）
@@ -55,6 +56,8 @@ KIND_MAP = {
     ".md": "md", ".markdown": "md", ".txt": "txt", ".text": "txt",
     ".html": "html", ".htm": "html", ".pdf": "pdf",
     ".docx": "docx", ".doc": "docx",
+    ".pptx": "pptx", ".ppt": "pptx",
+    ".xlsx": "xlsx", ".xls": "xlsx", ".csv": "csv",
 }
 IMAGE_EXT = {".png", ".jpg", ".jpeg", ".webp", ".bmp", ".tif", ".tiff", ".gif"}
 VIDEO_EXT = {".mp4", ".mov", ".mkv", ".avi", ".webm", ".m4v"}
@@ -113,6 +116,30 @@ class TextExtractor(HTMLParser):
         return "".join(self.out)
 
 
+def _md_export():
+    """延迟导入同目录的 md_export.py —— 只有真要用 markitdown / 产 md 时才加载。"""
+    here = str(Path(__file__).resolve().parent)
+    if here not in sys.path:
+        sys.path.insert(0, here)
+    import md_export
+
+    return md_export
+
+
+def _parse_office(path: Path, kind: str):
+    """Office / 表格 → markitdown 转 markdown → 按标题切块。
+
+    旧版本这里没有分支，docx 会落进下面的「按 utf-8 读文本」逻辑，
+    二进制被当文本解码，入库的是一堆乱码。
+    """
+    m = _md_export()
+    text, _engine, mtitle = m._markitdown(path)
+    blocks = m.to_blocks(text)
+    if not blocks:
+        raise ValueError("没抽到内容（文件可能是空的，或是旧版 .doc/.ppt 二进制格式）")
+    return kind, (mtitle or path.stem).strip(), blocks
+
+
 def strip_frontmatter(text):
     if text.startswith("---"):
         i = text.find("\n---", 3)
@@ -132,6 +159,8 @@ def parse_file(path: Path, dpi=OCR_DPI, interval=FRAME_EVERY):
         return parse_image(path)
     if kind in ("video", "audio"):
         return parse_media(path, kind, interval)
+    if kind in ("docx", "pptx", "xlsx", "csv"):
+        return _parse_office(path, kind)
 
     raw = path.read_bytes()
     text = raw.decode("utf-8", errors="replace")
@@ -484,11 +513,28 @@ def connect():
     CREATE VIRTUAL TABLE IF NOT EXISTS chunks_fts USING fts5(tokens);
     CREATE INDEX IF NOT EXISTS idx_chunks_doc ON chunks(doc_id);
     """)
+    _migrate(db)
     return db
 
 
-def min_block_len(heading):
-    """OCR / 转写来的块天然短（一页截图可能只有一行字），不能按正文阈值丢弃。"""
+def _migrate(db):
+    """给老库补列。幂等，每次 connect 都会跑一遍。"""
+    have = {r[1] for r in db.execute("PRAGMA table_info(documents)")}
+    for col, decl in (
+        ("md_path", "TEXT"),      # markdown/xxx.md 的绝对路径
+        ("md_engine", "TEXT"),    # pymupdf4llm / markitdown / ocr / native
+        ("md_status", "TEXT"),    # ok / partial / failed:原因
+    ):
+        if col not in have:
+            db.execute("ALTER TABLE documents ADD COLUMN %s %s" % (col, decl))
+    db.commit()
+
+
+def min_block_len(heading, kind=None):
+    """OCR / 转写 / Office 来的块天然短（一页截图可能只有一行字、一份 PPT 的一个要点
+    只有几个字），不能按正文阈值丢弃，否则整篇会被判成「没抽到文本」。"""
+    if kind in ("docx", "pptx", "xlsx", "csv"):
+        return 6
     tag = (heading or "").split(" ")[0]
     return 6 if tag in ("OCR", "画面", "口播", "图片文字", "字幕") else MIN_CHUNK
 
@@ -548,7 +594,7 @@ def add_file(db, path: Path, copy=True, quiet=False, dpi=OCR_DPI, interval=FRAME
     pos = 0
     for seq, (heading, page, text) in enumerate(blocks):
         body = text.strip()
-        if len(body) < min_block_len(heading):
+        if len(body) < min_block_len(heading, kind):
             continue
         # 超长块按 HARD 再切
         pieces = [body] if len(body) <= HARD else [body[i:i + HARD] for i in range(0, len(body), HARD)]
@@ -563,9 +609,34 @@ def add_file(db, path: Path, copy=True, quiet=False, dpi=OCR_DPI, interval=FRAME
             n += 1
     db.execute("UPDATE documents SET nchunks=? WHERE id=?", (n, doc_id))
     db.commit()
+
+    # 产出一份 markdown 原文。失败的照常入库、照常可检索，只记 md_status。
+    _export_md(db, doc_id, quiet=quiet)
+
     if not quiet:
         print("  ✓ %s  →  %s  %d 段  %s" % (path.name[:50], doc_id, n, title[:40]))
     return doc_id
+
+
+def _doc_row(db, doc_id):
+    cur = db.execute("SELECT * FROM documents WHERE id=?", (doc_id,))
+    row = cur.fetchone()
+    if not row:
+        return None
+    return dict(zip([d[0] for d in cur.description], row))
+
+
+def _export_md(db, doc_id, quiet=False):
+    """给一篇文档产 markdown。任何失败都不许把入库流程带崩。"""
+    try:
+        m = _md_export()
+        doc = _doc_row(db, doc_id)
+        if doc:
+            m.render_doc(db, doc, quiet=quiet)
+    except SystemExit as e:
+        print("  · markdown 未生成：%s" % str(e).splitlines()[0][:70])
+    except Exception as e:
+        print("  · markdown 未生成：%s" % (str(e).splitlines()[0][:70] if str(e) else type(e).__name__))
 
 
 def cmd_add(args):
@@ -779,7 +850,7 @@ def cmd_show(args):
 
 def cmd_rm(args):
     db = connect()
-    row = db.execute("SELECT path FROM documents WHERE id=?", (args.doc_id,)).fetchone()
+    row = db.execute("SELECT path, md_path FROM documents WHERE id=?", (args.doc_id,)).fetchone()
     if not row:
         print("没有这篇文档:", args.doc_id)
         return
@@ -787,6 +858,14 @@ def cmd_rm(args):
     db.execute("DELETE FROM chunks WHERE doc_id=?", (args.doc_id,))
     db.execute("DELETE FROM documents WHERE id=?", (args.doc_id,))
     db.commit()
+
+    # markdown 是派生物，随条目一起清掉；原件在 sources/，随时可重转
+    if row[1]:
+        mp = Path(row[1])
+        if mp.exists():
+            mp.unlink()
+            print("已删除 markdown:", mp.name)
+
     if args.purge:
         p = Path(row[0])
         if p.exists() and SOURCES in p.parents:
@@ -881,6 +960,38 @@ def cmd_export(args):
     print("  从 %s 打开即可浏览" % (out / "INDEX.md"))
 
 
+def cmd_md(args):
+    """产出 markdown 原文到 markdown/。默认只补缺失的，不动已有的。"""
+    db = connect()
+    m = _md_export()
+    if args.all:
+        mode = "all"
+    elif args.retry:
+        mode = "retry"
+    else:
+        mode = "missing"
+
+    stat = m.run(db, mode=mode, doc_id=getattr(args, "doc_id", None))
+    if not stat:
+        return
+    made = stat.get("ok", 0) + stat.get("partial", 0)
+    print("markdown：新增 %d 篇（其中 %d 篇只有识别文字、无版面结构）· 跳过 %d · 失败 %d"
+          % (made, stat.get("partial", 0), stat.get("skip", 0), stat.get("failed", 0)))
+    if stat.get("failed"):
+        print("  失败项重试：python bin/kb.py md --retry")
+
+    keep = {Path(r[0]).name for r in
+            db.execute("SELECT md_path FROM documents WHERE md_path IS NOT NULL AND md_path<>''")}
+    gone = 0
+    if m.MD_DIR.exists():
+        for f in m.MD_DIR.glob("*.md"):
+            if f.name not in keep:
+                f.unlink()
+                gone += 1
+    if gone:
+        print("  清理孤儿 markdown %d 个" % gone)
+
+
 def main():
     ap = argparse.ArgumentParser(description="专业知识库：导入、检索、出处追溯")
     sub = ap.add_subparsers(dest="cmd")
@@ -926,6 +1037,12 @@ def main():
     ex = sub.add_parser("export-md", help="导出人读的 Markdown 投影到 reading/")
     ex.add_argument("--out", help="输出目录，默认 reading/")
     ex.set_defaults(func=cmd_export)
+
+    md = sub.add_parser("md", help="产出 markdown 原文到 markdown/（派生物，可重转）")
+    md.add_argument("--all", action="store_true", help="全量重转，覆盖已有的")
+    md.add_argument("--retry", action="store_true", help="只重试上次失败的")
+    md.add_argument("--doc", dest="doc_id", help="只处理这一篇")
+    md.set_defaults(func=cmd_md)
 
     args = ap.parse_args()
     if not args.cmd:

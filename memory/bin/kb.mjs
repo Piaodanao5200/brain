@@ -245,7 +245,23 @@ switch (cmd) {
       rows.push(["inbox", C.r("解析出错 ") + C.dim(syncErr.trim().split("\n").pop().slice(0, 60))]);
     }
 
-    // ② 导出人读投影
+    // ② 补齐 markdown 原文（新文件入库时已自动产出，这里补历史遗留的缺失）
+    try {
+      const out = pyRun(["bin/kb.py", "md"]);
+      const mm = out.match(/新增 (\d+) 篇.*?失败 (\d+) 篇/);
+      if (mm) {
+        const [made, bad] = [+mm[1], +mm[2]];
+        if (bad) failed++;
+        rows.push(["md", made ? `新增 ${made} 篇${bad ? C.r(" · 失败 " + bad + " 篇") : ""}` : C.dim("无缺失")]);
+      } else {
+        rows.push(["md", C.dim("已是最新")]);
+      }
+    } catch (e) {
+      failed++;
+      rows.push(["md", C.r("补齐失败 ") + C.dim(String(e.stderr || e.message).slice(-60))]);
+    }
+
+    // ③ 导出人读投影
     try {
       const out = pyRun(["bin/kb.py", "export-md"]);
       const mm = out.match(/(\d+)\s*篇/);
@@ -255,7 +271,7 @@ switch (cmd) {
       rows.push(["投影", C.r("导出失败")]);
     }
 
-    // ③ 重建记忆体索引
+    // ④ 重建记忆体索引
     try {
       rebuildIndex();
       const n = scan().filter((e) => e.type !== "index").length;
@@ -265,7 +281,7 @@ switch (cmd) {
       rows.push(["索引", C.r("重建失败 ") + C.dim(String(e.message).slice(0, 60))]);
     }
 
-    // ④ 重刷阅读页
+    // ⑤ 重刷阅读页
     try {
       const out = execFileSync(process.execPath, [path.join(HERE, "render.mjs")], {
         encoding: "utf8",
@@ -280,9 +296,12 @@ switch (cmd) {
 
     const sec = ((Date.now() - t0) / 1000).toFixed(1);
     console.log(failed ? C.r(`✗ 更新完成但 ${failed} 步失败`) + C.dim(` · ${sec}s`) : C.g("✓ 全部更新完成") + C.dim(` · ${sec}s`));
-    const w = Math.max(...rows.map((r) => r[0].length));
-    for (const [k, v] of rows) console.log("  " + C.dim(k.padEnd(w)) + "  " + v);
-    console.log("  " + C.dim("打开".padEnd(w)) + "  " + path.join(HERE, "..", "reading/index.html"));
+    // 中文占两格，按字符数 padEnd 会错位，这里按显示宽度算
+    const wOf = (s) => [...s].reduce((n, ch) => n + (/[\u3000-\u9fff\uff00-\uffef]/.test(ch) ? 2 : 1), 0);
+    const pad = (s, n) => s + " ".repeat(Math.max(0, n - wOf(s)));
+    const w = Math.max(...rows.map((r) => wOf(r[0])));
+    for (const [k, v] of rows) console.log("  " + C.dim(pad(k, w)) + "  " + v);
+    console.log("  " + C.dim(pad("打开", w)) + "  " + path.join(HERE, "..", "reading/index.html"));
     if (failed) process.exitCode = 1;
     break;
   }
