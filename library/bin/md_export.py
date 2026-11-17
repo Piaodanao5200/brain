@@ -259,13 +259,17 @@ def render_doc(db, doc, force=False, quiet=False) -> str:
         rel = path.relative_to(ROOT).as_posix()   # 入仓用相对路径，换机器也能看懂
     except ValueError:
         rel = path.as_posix()
+    # 出处优先用原始来源（URL/绝对路径），没有再退回库内归档路径。
+    # doc 是 SELECT * 的 dict，老库未迁移完时可能没这两个键，用 .get 兜底。
+    origin = (doc.get("source") or "").strip()
     meta = {
         "id": doc_id,
         "title": title,
         "kind": kind,
         "engine": engine,
         "pages": n_pages or None,
-        "source": rel,
+        "source": origin or rel,
+        "platform": doc.get("platform") or None,
         "added": doc["added"],
         "generated": time.strftime("%Y-%m-%d %H:%M"),
     }

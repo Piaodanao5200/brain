@@ -143,6 +143,7 @@ export function scan() {
       scope: fm.scope || "project",
       title: fm.title || firstHeading(body) || path.basename(file, ".md"),
       tags: Array.isArray(fm.tags) ? fm.tags : (fm.tags ? [fm.tags] : []),
+      aliases: Array.isArray(fm.aliases) ? fm.aliases : (fm.aliases ? String(fm.aliases).split(/[,，\s]+/).filter(Boolean) : []),
       created: fm.created || iso(stat.birthtime),
       updated: fm.updated || iso(stat.mtime),
       valid_from: fm.valid_from || "",
@@ -228,11 +229,12 @@ export function tokenize(s) {
 }
 
 const K1 = 1.2, B = 0.75;
-const FIELD_W = { title: 3, tags: 2, body: 1, source: 0.5 };
+const FIELD_W = { title: 3, aliases: 2.5, tags: 2, body: 1, source: 0.5 };
 
 function docTokens(e) {
   return {
     title: tokenize(e.title),
+    aliases: tokenize((e.aliases || []).join(" ")),
     tags: tokenize(e.tags.join(" ")),
     body: tokenize(e.body),
     source: tokenize(e.source),
@@ -296,6 +298,7 @@ export function search(query, opts = {}) {
     const qLower = String(query).toLowerCase().trim();
     if (qLower.length >= 2) {
       if (d.e.title.toLowerCase().includes(qLower)) s += 3;
+      else if ((d.e.aliases || []).some((a) => String(a).toLowerCase().includes(qLower))) s += 1.5;
       else if (d.e.body.toLowerCase().includes(qLower)) s += 1.2;
       if (d.e.tags.some((t) => qLower.includes(String(t).toLowerCase()))) s += 0.8;
     }
@@ -359,6 +362,8 @@ export function writeEntry(input = {}) {
   const body = String(input.body || "").trim();
   if (!body) throw new Error("body 必填：请写 50–150 字正文，不要只留标题");
   const tags = Array.isArray(input.tags) ? input.tags : String(input.tags || "").split(/[,，\s]+/).filter(Boolean);
+  // 别名：中英文/缩写/别称，专供检索匹配。查询词不在标题正文里、但在别名里时也能命中。
+  const aliases = Array.isArray(input.aliases) ? input.aliases : String(input.aliases || "").split(/[,，\s]+/).filter(Boolean);
   const warnings = [];
 
   if (body.length > 2000) warnings.push("正文超过 2000 字，建议拆分或压缩到 150 字以内，否则检索信噪比会下降");
@@ -382,6 +387,7 @@ export function writeEntry(input = {}) {
     scope: input.scope || "project",
     title,
     tags,
+    aliases,
     created: date,
     updated: date,
     valid_from: input.valid_from || date,
@@ -430,6 +436,7 @@ export function supersede(id, patch = {}) {
     title: patch.title || old.title,
     body: patch.body || old.body,
     tags: patch.tags || old.tags,
+    aliases: patch.aliases || old.aliases,
     scope: patch.scope || old.scope,
     source: patch.source || old.source || "supersede",
     confidence: patch.confidence ?? old.confidence ?? 0.9,
@@ -465,6 +472,11 @@ export function updateEntry(idOrRel, patch = {}) {
     fm.tags = Array.isArray(patch.tags)
       ? patch.tags
       : String(patch.tags || "").split(/[,，\s]+/).filter(Boolean);
+  }
+  if (patch.aliases !== undefined) {
+    fm.aliases = Array.isArray(patch.aliases)
+      ? patch.aliases
+      : String(patch.aliases || "").split(/[,，\s]+/).filter(Boolean);
   }
   if (patch.status !== undefined) {
     const ok = ["active", "canonical", "superseded", "archived", "draft"];

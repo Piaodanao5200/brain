@@ -26,15 +26,75 @@ python bin/kb.py sync      # inbox 里有什么就导什么，成功的自动清
 ```bash
 python bin/kb.py add "D:/某目录/论文"        # 导入整个目录（递归）
 python bin/kb.py add "某文件.pdf"            # 导入单篇
-python bin/kb.py search "注意力机制 长文本"    # 检索
-python bin/kb.py stats                      # 库有多大
+python bin/kb.py add "某文件.pdf" --topic PLC   # 导入并归到「PLC」主题
+python bin/kb.py add "x.mp4" --source "https://www.bilibili.com/video/BV1xx" --platform B站  # 指定出处/平台
+python bin/kb.py search "注意力机制" --topic AI大模型  # 只在某主题里检索
+python bin/kb.py search "S7-1200" --platform B站  # 只在某平台里检索
+python bin/kb.py stats                      # 库有多大（含按格式/按主题统计）
 python bin/kb.py list --kind pdf            # 有哪些 PDF
-python bin/kb.py show md-73a4db4ff9         # 看某篇的章节结构
+python bin/kb.py list --platform 抖音        # 某平台下有哪些篇
+python bin/kb.py show md-73a4db4ff9         # 看出处/平台/章节结构
+python bin/kb.py topic list -v              # 看所有主题及各自文档
+python bin/kb.py meta list                  # 看平台分布
 ```
+
+## 主题分类
+
+按主题给资料分组（如 `PLC` / `AI大模型`），与格式归档正交——原件仍按格式存 `sources/`，主题只是 `store.db` 里的一个标签。
+
+```bash
+# 方式一：导入时指定
+python bin/kb.py add "西门子S7-1200手册.pdf" --topic PLC
+python bin/kb.py sync --topic PLC          # inbox 里的都归 PLC
+
+# 方式二：给已入库的文档事后归类
+python bin/kb.py topic set md-73a4db4ff9 AI大模型
+python bin/kb.py topic clear md-73a4db4ff9   # 清除主题
+
+# 查看 / 过滤
+python bin/kb.py topic list                 # 各主题篇数
+python bin/kb.py topic list -v              # 各主题下的文档
+python bin/kb.py topic list -v --topic PLC  # 某主题的文档
+python bin/kb.py topic list -v --uncategorized  # 未分类的文档
+python bin/kb.py search "关键词" --topic PLC    # 检索限定主题
+```
+
+主题写在 `documents.topic` 列。重复导入同一文件（内容哈希相同）时带 `--topic` 只会补主题，不会重复入库。删库重建（`rebuild`）不丢主题——主题存在库外的 `sources/.topics.json` 里，重建时自动回填。
+
+## 来源与平台
+
+每篇资料都记两件事：**来源**（原始 URL 或绝对路径，区别于 `sources/` 里的库内归档路径）和**平台**（B站 / 抖音 / 小红书 / YouTube / 微信公众号 / PDF…）。和主题一样正交，不改动原件。
+
+填写优先级（高→低）：
+
+1. `add`/`sync` 的 `--source` / `--platform` 参数
+2. md 头部 frontmatter 里的 `source` / `platform` / `url`（抓取工具生成的 md 常自带）
+3. 自动推断：来源=文件绝对路径，平台按 URL 域名或扩展名推（`.pdf`→PDF，`.mp4`→视频…）
+4. 事后用 `meta set` 改
+
+```bash
+# 导入时指定
+python bin/kb.py add "视频.mp4" --source "https://www.douyin.com/video/123" --platform 抖音
+
+# 事后查看 / 修改
+python bin/kb.py meta show md-73a4db4ff9
+python bin/kb.py meta set md-73a4db4ff9 --set platform B站 --set source "https://...BV1xx"
+python bin/kb.py meta list                       # 按平台统计
+
+# 按平台过滤
+python bin/kb.py search "关键词" --platform B站
+python bin/kb.py list --platform PDF
+```
+
+写在 `documents.source` / `documents.platform` 列，另存 `sources/.meta.json`（sha→出处），`rebuild` 不丢。`markdown/` 和 `reading/` 产出的 md 头部 frontmatter 也会带上 source / platform。音视频的「识别原件」头部额外写 `captured` 采集日期快照。
 
 `sync` 与 `add` 的区别：`sync` 只认 `inbox/`，导入成功后会把原件删掉（原文已复制进 `sources/`），失败的留在原处让你看得见；`add` 可以指定任意路径，且不动原件。
 
 导入时原文会被**复制**一份到 `sources/`（按格式分目录，文件名前面带内容哈希）。原始文件不动，也不删。加 `--no-copy` 可以只索引不复制。
+
+**例外——音视频不留原件**：mp3/mp4 等媒体体积大，不复制进库；只把识别出的文字拼成 md 存到 `sources/video/` / `sources/audio/` 作为「识别原件」，可检索、可重建。代价：**无法再从原视频重新转写**（换字幕、换更大 Whisper 模型都不行），要重来只能拿原始媒体重新 `add`。图片、PDF、Word 等仍保留原件。
+
+**切块**：默认 `NO_SPLIT=True`——整篇文档存成一个块，检索命中返回全文，heading（页码/时间点）作为 `[标签]` 内联保留出处线索。要切回分块（`TARGET` 600 字 / `HARD` 1400 字）把 `bin/kb.py` 顶部的 `NO_SPLIT` 改成 `False`，再 `rebuild --force`。
 
 ## 检索返回什么
 
@@ -45,7 +105,7 @@ python bin/kb.py show md-73a4db4ff9         # 看某篇的章节结构
    1. **最强和最优不是同一个模型。** Claude Fable 5.2 能力第一（AA 智能指数 65）…
 ```
 
-四样东西缺一不可：**原文片段**（不是 AI 概括）、**文件**、**位置**（页码 / 章节 / 第几段）、**文档 id**。任何一条你都能回到原文核对——这是它跟"聊天记录搜索"的根本区别。
+四样东西缺一不可：**原文片段**（不是 AI 概括）、**文件**、**位置**（整篇一块时为文档 id；切块模式下为页码 / 章节 / 段号）、**文档 id**。任何一条你都能回到原文核对——这是它跟"聊天记录搜索"的根本区别。
 
 ## 支持的格式
 
@@ -58,9 +118,9 @@ python bin/kb.py show md-73a4db4ff9         # 看某篇的章节结构
 | `.docx` | ✅ | markitdown（mammoth）转 md，标题/列表/表格都在 |
 | `.pptx` `.ppt` | ✅ | markitdown，按幻灯片分节 |
 | `.xlsx` `.xls` `.csv` | ✅ | markitdown，表格转 md 表 |
-| 图片 `png jpg webp bmp tiff` | ✅ | OCR 出文字，原图归档，投影里嵌入 |
-| 视频 `mp4 mov mkv avi webm` | ✅ | 抽帧 OCR（带时间点）+ 语音转写 |
-| 音频 `mp3 wav m4a flac` | ✅ | 语音转写 |
+| 图片 `png jpg webp bmp tiff` | ✅ | OCR 出文字，**原图归档** `sources/image/` |
+| 视频 `mp4 mov mkv avi webm` | ✅ | 抽帧 OCR（带时间点）+ 语音转写 → 结果存 `sources/video/*.md`，**媒体原件不留** |
+| 音频 `mp3 wav m4a flac` | ✅ | 语音转写 → 结果存 `sources/audio/*.md`，**媒体原件不留** |
 
 旧版 `.doc` / `.ppt`（二进制格式）和加密 PDF 会在入箱阶段报错并留在 `inbox/`，不会入库。
 

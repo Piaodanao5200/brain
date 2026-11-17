@@ -73,9 +73,12 @@ cd D:/collaborative project/brain/memory && node server/mcp-server.mjs     # 监
 
 ```bash
 node "D:\collaborative project\brain\memory\bin\kb.mjs" search "关键词" -k 5
+node "D:\collaborative project\brain\memory\bin\kb.mjs" search "ego | browser | 浏览器" --multi   # 多说法融合
 node "D:\collaborative project\brain\memory\bin\kb.mjs" read <id>
-node "D:\collaborative project\brain\memory\bin\kb.mjs" new --type decision --title "…" --body "…" --tags a,b --source "…"
+node "D:\collaborative project\brain\memory\bin\kb.mjs" new --type decision --title "…" --body "…" --tags a,b --aliases 别名1,别名2 --source "…"
 node "D:\collaborative project\brain\memory\bin\kb.mjs" bootstrap          # 会话启动看全局
+node "D:\collaborative project\brain\memory\bin\kb.mjs" mem               # 同步索引 + 字符预算油表 + 落空账
+node "D:\collaborative project\brain\memory\bin\kb.mjs" misses            # 落空登记本明细
 node "D:\collaborative project\brain\memory\bin\kb.mjs" daily              # 今天新增/更新/作废
 ```
 
@@ -108,11 +111,53 @@ source: 用户口述 @ 2026-11-15     # 必填
 
 1. **`kb_bootstrap`**：拿到写入规则 + 全部条目的紧凑索引。只建立"有哪些记忆"的地图。
 2. **从用户本次问题提取关键词，`kb_search`（k=5）**。不要用「项目」「帮助」这类无信息量的词。
-3. **只对命中的条目 `kb_read`**，一次最多 5 条全文。
-4. **没命中就正常回答**，说明这是新话题。不要硬凑，也不要跟用户说「我查了记忆库但没找到」。
+3. **只对命中的条目 `kb_read`，一次最多 2 条全文（条数闸）**。还要更多就分轮拿，别一次灌满上下文。
+4. **没命中就按「检索兜底阶梯」换法子**（见下节），都落空才当新话题回答。不要硬凑。
 5. 问题若落在某个已有决策范围内，**先读那条决策再动手**，避免推翻已定的方案。
 
 **不要全量加载索引内容。** 索引是地图，不是内容。全读会挤占上下文，且大部分与本次无关。
+
+## 检索与预算纪律（2026-11-18 借鉴 TencentDB Agent Memory，全 agent 遵守）
+
+### 记忆分层（L0–L3）
+
+| 层 | 内容 | 位置 | 何时进上下文 |
+|---|---|---|---|
+| L3 | 硬规则 + 索引 | 用户级 `MEMORY.md`（≤2,500 字符） | 平台自动注入 |
+| L2 | 技术细节专题 | `memory-technical.md`（≤3,000）、工作区 MEMORY.md（≤3,000） | 用到才读 |
+| L1 | 原子事实条目 | `memory/vault/` | 命中才读，一次 1–2 条 |
+| L0 | 原始对话 | `conversation_search` / 工作区日志 | L1 不够时兜底 |
+
+### 检索兜底阶梯（搜不到时按序换法，不许直接说"没有"）
+
+1. 换更具体的词再搜；同义词/中英文/缩写各试一次，或直接 `kb.mjs search "词1|词2|词3" --multi`（多说法融合，结果去重封顶 -k）
+2. 翻 `bootstrap` / INDEX.md 按分类扫
+3. `grep` vault 正文全文找
+4. `conversation_search` 查历史对话
+
+### 别名（aliases）
+
+- 写新条目尽量带 `--aliases "中英文,缩写,别称"`（如 ego 条目带 `browser,浏览器,Citro`）；`kb_supersede` 会自动继承旧条目的别名。
+- 命中差距的根源常是"记的词 ≠ 查的词"，别名就是专门填这个差的。
+
+### 落空登记（misses.log）
+
+- `search` 零命中（或只拿到兜底结果）会自动记入 `memory/misses.log`；`kb.mjs mem` / `refresh` 会列条数，`kb.mjs misses` 看明细、`--clear` 清空。
+- **攒够 3 条就处理**：补别名、补条目，然后清空。这是记忆系统的体检报告，别放着不管。
+
+### 字符预算（三闸里能落地的两条）
+
+- 条数闸：读全文一次 1–2 条；`--multi` 合并结果封顶 `-k`（默认 8）。
+- 字符预算闸：用户级 MEMORY.md ≤2,500、memory-technical.md ≤3,000、工作区 MEMORY.md ≤3,000；**超 80% 就压缩或拆文件**，别等被平台截断（4,000 上限的坑已踩过一次）。`kb.mjs mem` 看油表。
+- 超时闸做不到（文件读取无超时概念），不追求。
+
+### 收尾四格扫描（治漏记）
+
+实质工作收尾时，按四个格子过一遍对话：**决策 / 事实 / 坑 / 被否的方案**，列清单一次问用户"记哪几条"。写入仍须用户明确同意（铁律不变），扫描只是保证不漏提。
+
+### 负知识留存
+
+不光记"成功的路"，也记"此路不通"：调研中被排除的方案、试错失败的路径值得单独一条 pitfall，或写进结论条目的"为什么不是 B"。下次遇到同类问题不用重新踩一遍。
 
 ### WorkBuddy 桌面版没有自动注入（2026-11-16 起）
 

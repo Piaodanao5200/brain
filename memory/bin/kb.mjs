@@ -20,6 +20,52 @@ import { VAULT, scan, search, read, writeEntry, supersede, buildIndex, rebuildIn
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 
+/** 落空登记本：search 零命中（或全部是兜底结果）时把 query 记下来，
+ *  refresh/mem 会列出。治"不知道自己哪里搜不到"的盲区。 */
+const MISSES_LOG = path.join(VAULT, "..", "misses.log");
+
+function logMiss(query) {
+  try {
+    fs.appendFileSync(MISSES_LOG, `${new Date().toISOString()}\t${String(query).replace(/\s+/g, " ").slice(0, 120)}\n`, "utf8");
+  } catch {}
+}
+
+function missCount() {
+  try {
+    const lines = fs.readFileSync(MISSES_LOG, "utf8").split("\n").filter(Boolean);
+    return lines.length;
+  } catch {
+    return 0;
+  }
+}
+
+/** 字符预算油表：always-on / 专题文件的字符数 vs 预算线。
+ *  超 80% 预警，超 100% 报警——别等被平台截断了才发现。 */
+function charGauge() {
+  const USER_DIR = process.env.WB_USER_DIR || "D:/WorkBuddy/user-48a30fac-1fde-4b69-a7bb-ddcac39c873c-personal";
+  const rows = [
+    ["用户级 MEMORY.md", path.join(USER_DIR, "MEMORY.md"), 2500],
+    ["memory-technical.md", path.join(USER_DIR, "memory-technical.md"), 3000],
+    ["工作区 MEMORY.md", WB_MEMORY, 3000],
+  ];
+  const out = [];
+  for (const [name, p, budget] of rows) {
+    let chars = 0;
+    try {
+      chars = fs.readFileSync(p, "utf8").replace(/\s/g, "").length;
+    } catch {
+      out.push([name, C.r("读不到 ") + C.dim(p)]);
+      continue;
+    }
+    const pct = Math.round((chars / budget) * 100);
+    const bar = pct >= 100 ? C.r(`✗ ${chars}/${budget}（${pct}%）超预算，必须拆`)
+      : pct >= 80 ? C.y(`⚠ ${chars}/${budget}（${pct}%）接近上限`)
+      : C.g(`✓ ${chars}/${budget}（${pct}%）`);
+    out.push([name, bar]);
+  }
+  return out;
+}
+
 /**
  * 把 INDEX.md 压成紧凑清单，写进 WorkBuddy 的 MEMORY.md 标记区。
  * 为什么需要：WorkBuddy 桌面版不执行 settings.json 的 shell hook（2026-11-16 实测），
@@ -159,23 +205,52 @@ switch (cmd) {
   case "s": {
     const q = args._.join(" ");
     if (!q) {
-      console.error("用法: kb search \"关键词\"");
+      console.error('用法: kb search "关键词" [--multi "词1|词2|词3"]');
       process.exit(1);
     }
-    const hits = search(q, {
-      k: Number(args.k) || 8,
-      type: args.type,
-      tags: args.tags ? String(args.tags).split(",") : undefined,
-      includeInactive: Boolean(args.all),
-    });
+    // --multi：一个词搜不到时换个说法再搜的自动版。用 | 分隔 2-3 种说法，
+    // 逐个检索，按排名融合去重（RRF 思路的穷人版），总条数仍封顶 -k。
+    let hits;
+    if (args.multi) {
+      const variants = q.split("|").map((s) => s.trim()).filter(Boolean);
+      if (variants.length < 2) {
+        console.error(C.y("--multi 需要 2 个以上说法，用 | 分隔：") + C.dim('kb search "ego | browser | 浏览器" --multi'));
+        process.exit(1);
+      }
+      const k = Number(args.k) || 8;
+      const fused = new Map();
+      for (const v of variants) {
+        const list = search(v, { k, type: args.type, tags: args.tags ? String(args.tags).split(",") : undefined, includeInactive: Boolean(args.all) });
+        list.forEach((e, i) => {
+          const prev = fused.get(e.id);
+          const rrf = 1 / (60 + i + 1); // RRF：各路排名的倒数分数求和，谁靠前听谁的
+          if (prev) prev.score += rrf;
+          else fused.set(e.id, { ...e, score: rrf + (e.score > 0 ? 0.001 * (k - i) : 0), variant: v });
+        });
+      }
+      hits = [...fused.values()].sort((a, b) => b.score - a.score).slice(0, k);
+      // 全部说法都只拿到兜底（score≈0 的最近更新）才算真落空
+      const real = hits.some((e) => e.score > 0.01);
+      if (!hits.length || !real) logMiss(`multi: ${q}`);
+    } else {
+      hits = search(q, {
+        k: Number(args.k) || 8,
+        type: args.type,
+        tags: args.tags ? String(args.tags).split(",") : undefined,
+        includeInactive: Boolean(args.all),
+      });
+      // 没命中，或只拿到 score=0 的兜底结果（词面没对上），都记一笔
+      if (!hits.length || hits.every((e) => !e.score)) logMiss(q);
+    }
     if (!hits.length) {
-      console.log(C.y("没有命中。") + C.dim(" 这是全新话题，按当前对话处理即可。"));
+      console.log(C.y("没有命中。") + C.dim(" 已记入落空登记本（misses.log），refresh 时会列出。"));
       break;
     }
     console.log(C.dim(`命中 ${hits.length} 条：\n`));
     for (const e of hits) {
       console.log(`${C.c(e.id)} ${C.b(e.title)} ${C.dim(`[${e.type}] ${e.score > 0 ? "score " + e.score.toFixed(2) : "最近更新"}`)}`);
       console.log(C.dim(`  ${e.tags.map((t) => "#" + t).join(" ") || "无标签"} · ${d(e.updated)}${e.source ? " · " + e.source : ""}`));
+      if (e.aliases && e.aliases.length) console.log(C.dim(`  别名: ${e.aliases.join(" / ")}`));
       if (e.snippet) console.log(`  ${e.snippet}`);
       console.log("");
     }
@@ -192,7 +267,7 @@ switch (cmd) {
     const e = read(key);
     console.log(C.dim(`path: ${e.rel}`));
     console.log(C.b(e.title) + C.dim(`  [${e.type}] ${e.status}`));
-    console.log(C.dim(`${e.tags.map((t) => "#" + t).join(" ") || "无标签"} · 建立 ${d(e.created)} · 更新 ${d(e.updated)} · 置信 ${e.confidence ?? "-"}`));
+    console.log(C.dim(`${e.tags.map((t) => "#" + t).join(" ") || "无标签"}${e.aliases && e.aliases.length ? " · 别名 " + e.aliases.join("/") : ""} · 建立 ${d(e.created)} · 更新 ${d(e.updated)} · 置信 ${e.confidence ?? "-"}`));
     if (e.source) console.log(C.dim(`出处: ${e.source}`));
     if (e.supersedes.length) console.log(C.y(`取代: ${e.supersedes.join(", ")}`));
     console.log("\n" + e.body.trim());
@@ -208,6 +283,7 @@ switch (cmd) {
         title: args.title,
         body: bodyArg || "",
         tags: args.tags,
+        aliases: args.aliases,
         scope: args.scope,
         source: args.source,
         confidence: args.confidence,
@@ -252,7 +328,7 @@ switch (cmd) {
   }
 
   case "mem": {
-    /** 只同步 MEMORY.md 的索引段，不重建 INDEX */
+    /** 只同步 MEMORY.md 的索引段，不重建 INDEX；顺带报字符预算油表和落空账 */
     const r = syncMemoryIndex({ quiet: true });
     if (!r.ok) {
       console.log(C.r("✗ ") + r.reason);
@@ -260,6 +336,31 @@ switch (cmd) {
     } else {
       console.log(C.g("✓ MEMORY.md ") + C.dim(r.changed ? `已更新 ${r.count} 条` : "已是最新"));
       console.log(C.dim("  " + WB_MEMORY));
+    }
+    const n = missCount();
+    console.log(C.dim(`落空登记 ${n ? C.y(n + " 条") : "0 条"}${n ? C.dim(" · 用 kb.mjs misses 查看，攒够就补别名或补条目") : ""}`));
+    for (const [name, bar] of charGauge()) console.log("  " + C.dim(name) + "  " + bar);
+    break;
+  }
+
+  case "misses": {
+    /** 看落空登记本。--clear 清空。 */
+    try {
+      const lines = fs.readFileSync(MISSES_LOG, "utf8").split("\n").filter(Boolean);
+      if (!lines.length) {
+        console.log(C.dim("落空登记本是空的——目前没有搜不到的词。"));
+        break;
+      }
+      console.log(C.b(`落空 ${lines.length} 条：`));
+      for (const l of lines.slice(-30)) console.log(C.dim("  " + l.replace("\t", "  ")));
+      if (args.clear) {
+        fs.unlinkSync(MISSES_LOG);
+        console.log(C.g("✓ 已清空"));
+      } else {
+        console.log(C.dim("处理完（补了别名/条目）后用 kb.mjs misses --clear 清空"));
+      }
+    } catch {
+      console.log(C.dim("落空登记本是空的——目前没有搜不到的词。"));
     }
     break;
   }
@@ -340,6 +441,13 @@ switch (cmd) {
       rows.push(["待出结论", n > 0 ? C.y(`${n} 篇`) + C.dim(" · 让 agent 读全文拟结论") : C.dim("无")]);
     } catch {
       rows.push(["待出结论", C.dim("检测失败")]);
+    }
+
+    // ③.6 落空登记账（search 零命中的词，攒够就补别名或补条目）
+    {
+      const n = missCount();
+      if (n) rows.push(["落空登记", C.y(`${n} 条`) + C.dim(" · kb.mjs misses 查看")]);
+      else rows.push(["落空登记", C.dim("无")]);
     }
 
     // ④ 重建记忆体索引
@@ -445,10 +553,13 @@ switch (cmd) {
 
   ${C.c("bootstrap")}              会话启动：列出全部有效条目 + 最近变更
   ${C.c("search")} <关键词>        检索（-k 8 --type decision --tags a,b --all）
+                                   --multi "词1|词2|词3" 多说法融合搜；零命中自动记落空登记本
   ${C.c("read")} <id|路径|标题>     读全文
-  ${C.c("new")} --type <类型> --title <标题> --body <正文> --tags a,b --source <出处>
+  ${C.c("new")} --type <类型> --title <标题> --body <正文> --tags a,b --aliases 别名1,别名2 --source <出处>
   ${C.c("supersede")} <id> --body <新结论>   取代旧条目（不物理删除）
   ${C.c("index")}                  重建 INDEX.md
+  ${C.c("mem")}                    同步工作区 MEMORY.md 索引 + 字符预算油表 + 落空账
+  ${C.c("misses")} [--clear]        看落空登记本（处理完清空）
   ${C.c("refresh")}                一键更新：inbox 入库 → 导出投影 → 重建索引 → 刷页面
                                    （--library <目录> 或 KB_LIBRARY 指定知识库位置）
   ${C.c("ui")} [--port 8788]        打开本地看板：实时监看 + 直接增改
