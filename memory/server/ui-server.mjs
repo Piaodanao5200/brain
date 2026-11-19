@@ -105,6 +105,59 @@ function libraryFiles() {
   return out;
 }
 
+/**
+ * 读取 L3/L2/L0 三层「以文件形式存在」的记忆，给看板显示真实数量。
+ * L1 是 vault 条目，已在 entries 里统计；这三层不在 vault，过去侧栏恒显 0。
+ * 返回 { L3:[], L2:[], L0:[] }，每项 {title, rel, chars, lines, mtime, day}。
+ */
+function layerFiles() {
+  // 用户级目录：D:\WorkBuddy\user-*/  —— ROOT(brain/memory) 上三级到 D:\，再进 WorkBuddy
+  const wbRoot = path.resolve(ROOT, '..', '..', '..', 'WorkBuddy');
+  let userDir = null;
+  try {
+    userDir = fs.readdirSync(wbRoot, { withFileTypes: true })
+      .filter((d) => d.isDirectory() && /^user-/.test(d.name))
+      .map((d) => path.join(wbRoot, d.name))[0] || null;
+  } catch {}
+
+  const fileInfo = (p, title) => {
+    if (!p || !fs.existsSync(p)) return null;
+    try {
+      const text = fs.readFileSync(p, 'utf8');
+      const st = fs.statSync(p);
+      return {
+        title,
+        rel: path.relative(wbRoot, p).split(path.sep).join('/'),
+        chars: [...text].length,
+        lines: text.split(/\r?\n/).length,
+        mtime: st.mtimeMs,
+        day: dayStr(st.mtime),
+      };
+    } catch { return null; }
+  };
+
+  const L3 = [fileInfo(userDir && path.join(userDir, 'MEMORY.md'), '用户级 MEMORY.md')].filter(Boolean);
+
+  const L2 = [
+    fileInfo(userDir && path.join(userDir, 'memory-technical.md'), 'memory-technical.md'),
+    fileInfo(path.join(wbRoot, '.workbuddy', 'memory', 'MEMORY.md'), '工作区 MEMORY.md（KB-INDEX）'),
+  ].filter(Boolean);
+
+  const L0 = [];
+  const wsMem = path.join(wbRoot, '.workbuddy', 'memory');
+  try {
+    for (const name of fs.readdirSync(wsMem)) {
+      if (/^\d{4}-\d{2}-\d{2}\.md$/.test(name)) {
+        const f = fileInfo(path.join(wsMem, name), name.replace('.md', ' 日志'));
+        if (f) L0.push(f);
+      }
+    }
+  } catch {}
+  L0.sort((a, b) => b.mtime - a.mtime);
+
+  return { L3, L2, L0 };
+}
+
 function buildState() {
   const today = dayStr();
   const all = scan().filter((e) => e.type !== 'index');
@@ -120,7 +173,7 @@ function buildState() {
   for (const e of active) byType[e.type] = (byType[e.type] || 0) + 1;
 
   const strip = (e) => ({
-    id: e.id, type: e.type, scope: e.scope, title: e.title, tags: e.tags,
+    id: e.id, type: e.type, scope: e.scope, layer: e.layer || "L1", title: e.title, tags: e.tags,
     status: e.status, created: e.created, updated: e.updated,
     confidence: e.confidence, source: e.source, superseded_by: e.superseded_by,
     body: e.body, rel: e.rel, mtime: e.mtime,
@@ -145,6 +198,7 @@ function buildState() {
     },
     entries: all.map(strip),
     library: libraryFiles(),
+    layers: layerFiles(),
   };
 }
 

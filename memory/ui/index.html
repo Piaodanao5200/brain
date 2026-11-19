@@ -96,6 +96,7 @@ body{
 .card .snip{font-size:12.5px; color:var(--fg-2); margin-top:5px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden}
 .card .meta{font-size:11.5px; color:var(--fg-3); margin-top:7px; display:flex; flex-wrap:wrap; gap:10px; align-items:center; font-variant-numeric:tabular-nums}
 .badge{font-size:11px; padding:1px 7px; border-radius:999px; border:1px solid var(--line); color:var(--fg-2); background:var(--tag); flex:none; white-space:nowrap}
+.badge.layer{color:var(--kb); background:var(--kb-bg); border-color:var(--kb-line); font-variant-numeric:tabular-nums}
 .badge.knowledge{color:var(--kb); background:var(--kb-bg); border-color:var(--kb-line)}
 .badge.decision,.badge.fact,.badge.pitfall,.badge.todo,.badge.note,.badge.session{color:var(--mem); background:var(--mem-bg); border-color:var(--mem-line)}
 .badge.pitfall{color:var(--warn); background:var(--warn-bg); border-color:var(--warn-line)}
@@ -264,10 +265,21 @@ body{
   var OPEN = {today: true};
 
   var TYPE_LABEL = {knowledge:"知识",decision:"决策",fact:"事实",pitfall:"坑",todo:"待办",note:"笔记",session:"会话",archive:"归档"};
+  var LAYER_META = {
+    L3:{label:"L3 · 硬规则层", desc:"平台自动注入、常驻上下文的强制规则与索引。", loc:"用户级 MEMORY.md + KB-INDEX"},
+    L2:{label:"L2 · 技术细节层", desc:"用到才读的技术专题细节：路径、ID、踩坑。", loc:"memory-technical.md + 工作区 MEMORY.md"},
+    L1:{label:"L1 · 原子事实层", desc:"命中才读的原子记忆：决策/事实/坑/待办/知识，一条一个文件。", loc:"brain/memory/vault"},
+    L0:{label:"L0 · 原始对话层", desc:"L1 不够时的兜底：历史对话检索 + 工作区日期日志。", loc:"conversation_search + .workbuddy/memory/"}
+  };
   var NAV = [
     {grp:"变化"},
     {key:"today", label:"今日"},
     {key:"all", label:"全部条目"},
+    {grp:"层级 L0-L3"},
+    {key:"L3", label:"L3 硬规则"},
+    {key:"L2", label:"L2 技术细节"},
+    {key:"L1", label:"L1 原子事实"},
+    {key:"L0", label:"L0 对话日志"},
     {grp:"记忆体"},
     {key:"knowledge", label:"知识"},
     {key:"decision", label:"决策"},
@@ -291,6 +303,11 @@ body{
     if(key === "all") return all;
     if(key === "superseded") return all.filter(function(e){ return e.status === "superseded"; });
     if(key === "library") return [];
+    if(key === "L1") return all.filter(function(e){ return (e.layer||"L1") === "L1" && e.status !== "superseded" && e.status !== "archived"; });
+    // L3/L2/L0 是文件层，服务端 /api/state 读真实文件；补 id 供侧栏展开显示
+    if(key === "L2" || key === "L3" || key === "L0"){
+      return ((STATE.layers||{})[key]||[]).map(function(f){ return {id:"file:"+f.rel, title:f.title, mtime:f.mtime, chars:f.chars, rel:f.rel, lines:f.lines, day:f.day, status:"active"}; });
+    }
     // 分类只看有效条目；已作废的归到「已作废」，否则会被数两次
     return all.filter(function(e){ return e.type === key && e.status !== "superseded" && e.status !== "archived"; });
   }
@@ -378,7 +395,8 @@ body{
   function badge(e){
     var cls = e.type;
     var st = (e.status && e.status !== "active") ? ' <span class="badge ' + e.status + '">' + (e.status==="superseded"?"已取代":e.status) + "</span>" : "";
-    return '<span class="badge ' + cls + '">' + (TYPE_LABEL[e.type]||e.type) + "</span>" + st;
+    var ly = (e.layer||"L1") !== "L1" ? ' <span class="badge layer">' + esc(e.layer) + "</span>" : "";
+    return '<span class="badge ' + cls + '">' + (TYPE_LABEL[e.type]||e.type) + "</span>" + ly + st;
   }
 
   function card(e){
@@ -470,6 +488,30 @@ body{
       supList.sort(function(a,b){ return (b.mtime||0)-(a.mtime||0); });
       html = sect("已作废（被新条目取代，保留可查）", supList, "点开可看到被谁取代");
       if(!html) html = '<div class="empty">还没有作废的条目。</div>';
+    } else if(LAYER_META[VIEW]){
+      var meta = LAYER_META[VIEW];
+      $("viewTitle").textContent = meta.label;
+      var head = '<div class="sect"><h2>层级说明 <span class="cnt">' + VIEW + '</span></h2>' +
+        '<div class="card" style="cursor:default"><div class="row1"><span class="badge layer">' + VIEW + '</span><div class="ttl">' + esc(meta.label) + '</div></div>' +
+        '<div class="snip">' + esc(meta.desc) + '</div><div class="meta"><span>位置：' + esc(meta.loc) + '</span></div></div></div>';
+      if(VIEW === "L1"){
+        var l1 = entries.filter(function(e){ return (e.layer||"L1") === "L1" && e.status !== "superseded" && e.status !== "archived"; });
+        l1.sort(function(a,b){ return (b.mtime||0)-(a.mtime||0); });
+        html = head + sect("L1 条目", l1, "共 " + l1.length + " 条");
+      } else {
+        var fl = ((s.layers||{})[VIEW]||[]);
+        if(!fl.length){
+          html = head + '<div class="empty">该层暂无文件。按上方「位置」路径查找。</div>';
+        } else {
+          html = head + '<div class="sect"><h2>文件 <span class="cnt">' + fl.length + "</span></h2>" +
+            fl.map(function(f){
+              return '<div class="card" style="cursor:default"><div class="row1"><span class="badge layer">' + VIEW +
+                '</span><div class="ttl">' + esc(f.title) + "</div></div>" +
+                '<div class="snip">' + esc(f.rel) + "</div>" +
+                '<div class="meta"><span>' + f.chars + " 字符</span><span>" + f.lines + " 行</span><span>" + esc(f.day) + "</span></div></div>";
+            }).join("") + "</div>";
+        }
+      }
     } else {
       var label = TYPE_LABEL[VIEW] || VIEW;
       $("viewTitle").textContent = label;
