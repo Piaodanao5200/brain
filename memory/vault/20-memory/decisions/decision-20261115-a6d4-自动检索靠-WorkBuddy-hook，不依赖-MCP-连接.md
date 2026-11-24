@@ -2,6 +2,7 @@
 id: decision-20261115-a6d4
 type: decision
 scope: project
+layer: L1
 title: 自动检索靠 WorkBuddy hook，不依赖 MCP 连接
 tags: [架构, hook, 自动检索]
 created: 2026-11-15

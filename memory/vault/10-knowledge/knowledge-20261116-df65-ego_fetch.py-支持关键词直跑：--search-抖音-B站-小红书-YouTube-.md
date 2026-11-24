@@ -2,6 +2,7 @@
 id: knowledge-20261116-df65
 type: knowledge
 scope: project
+layer: L1
 title: ego_fetch.py 支持关键词直跑：--search 抖音/B站/小红书/YouTube 通，X 不可用
 tags: [ego, 取数, 抖音, bilibili, 小红书, youtube, skill]
 created: 2026-11-16

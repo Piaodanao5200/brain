@@ -2,6 +2,7 @@
 id: fact-20261115-bb6e
 type: fact
 scope: user
+layer: L1
 title: 项目存放约定：D盘按agent名分文件夹，项目再分子文件夹
 tags: [约定, 目录结构, 项目存放]
 created: 2026-11-15

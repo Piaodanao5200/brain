@@ -2,6 +2,7 @@
 id: decision-20261116-f828
 type: decision
 scope: project
+layer: L1
 title: 自动注入改走 MEMORY.md：桌面版不执行 shell hook
 tags: [架构, hook, 自动检索]
 created: 2026-11-16

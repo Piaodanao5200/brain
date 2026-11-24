@@ -2,6 +2,7 @@
 id: knowledge-20261116-05ba
 type: knowledge
 scope: user
+layer: L1
 title: 多 agent 共用 skill：一份实体 + 各 agent 目录挂 Junction
 tags: [约定, skill, 目录结构, junction]
 created: 2026-11-16

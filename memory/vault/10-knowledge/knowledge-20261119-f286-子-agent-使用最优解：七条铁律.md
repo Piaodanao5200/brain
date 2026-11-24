@@ -2,6 +2,7 @@
 id: knowledge-20261119-f286
 type: knowledge
 scope: project
+layer: L1
 title: 子 agent 使用最优解：七条铁律
 tags: [子agent, 多agent, token, 编排]
 created: 2026-11-19

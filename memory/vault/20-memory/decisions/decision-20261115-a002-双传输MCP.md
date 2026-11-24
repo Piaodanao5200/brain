@@ -2,6 +2,7 @@
 id: decision-20261115-a002
 type: decision
 scope: project
+layer: L1
 title: 同一份 MCP 服务同时暴露 stdio 与 HTTP 两种传输
 tags: [架构, mcp, 部署]
 created: 2026-11-15

@@ -2,6 +2,7 @@
 id: knowledge-20261116-c055
 type: knowledge
 scope: project
+layer: L1
 title: push.mjs 的三个坑：父节点、ref 单复数、缓存落盘时机
 tags: [github, git, api, 推送]
 created: 2026-11-16

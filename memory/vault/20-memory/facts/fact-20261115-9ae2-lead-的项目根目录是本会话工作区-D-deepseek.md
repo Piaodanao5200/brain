@@ -2,6 +2,7 @@
 id: fact-20261115-9ae2
 type: fact
 scope: project
+layer: L1
 title: lead 的项目根目录是本会话工作区 D:\deepseek
 tags: [约定, 目录结构, 项目存放, lead]
 created: 2026-11-15

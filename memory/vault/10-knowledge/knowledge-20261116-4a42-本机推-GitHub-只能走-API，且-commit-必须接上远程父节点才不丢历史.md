@@ -2,6 +2,7 @@
 id: knowledge-20261116-4a42
 type: knowledge
 scope: project
+layer: L1
 title: git 可直接连 GitHub：TLS 走 openssl 后端，认证用 extraheader
 tags: [github, git, tls, 沙箱]
 created: 2026-11-16

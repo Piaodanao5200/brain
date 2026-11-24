@@ -2,6 +2,7 @@
 id: fact-20261115-0d26
 type: fact
 scope: user
+layer: L1
 title: 共同项目放 D:\collaborative project\<项目名>，单 agent 项目放自己目录
 tags: [约定, 目录结构, 项目存放]
 created: 2026-11-15

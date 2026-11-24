@@ -2,6 +2,7 @@
 id: knowledge-20261116-734e
 type: knowledge
 scope: project
+layer: L1
 title: ego 并行只能靠多进程：同一进程内多开空间不提速
 tags: [ego, 并行, 多进程, 并发, 风控]
 created: 2026-11-16

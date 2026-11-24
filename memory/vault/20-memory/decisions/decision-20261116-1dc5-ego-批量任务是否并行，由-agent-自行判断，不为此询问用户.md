@@ -2,6 +2,7 @@
 id: decision-20261116-1dc5
 type: decision
 scope: project
+layer: L1
 title: ego 批量任务是否并行，由 agent 自行判断，不为此询问用户
 tags: [ego, 并行, 决策权限, 协作约定]
 created: 2026-11-16

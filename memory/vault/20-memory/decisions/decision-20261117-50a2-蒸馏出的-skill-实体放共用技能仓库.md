@@ -2,8 +2,9 @@
 id: decision-20261117-50a2
 type: decision
 scope: project
+layer: L1
 title: 蒸馏出的 skill 实体放共用技能仓库
-tags: []
+tags: [skill, 蒸馏, 共用仓库]
 created: 2026-11-17
 updated: 2026-11-17
 valid_from: 2026-11-17

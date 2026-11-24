@@ -2,6 +2,7 @@
 id: decision-20261119-b227
 type: decision
 scope: project
+layer: L1
 title: 子 agent 判断权归 agent，无需逐次请示
 tags: [子agent, 判断权, 授权, 自主]
 created: 2026-11-19

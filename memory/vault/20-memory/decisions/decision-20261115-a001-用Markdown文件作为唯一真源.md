@@ -2,6 +2,7 @@
 id: decision-20261115-a001
 type: decision
 scope: project
+layer: L1
 title: 用 Markdown 文件作为唯一真源，暂不引入向量库
 tags: [架构, 存储, markdown]
 created: 2026-11-15

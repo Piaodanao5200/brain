@@ -2,6 +2,7 @@
 id: knowledge-20261116-1c14
 type: knowledge
 scope: project
+layer: L1
 title: 本机推 GitHub 只能走 API，且 commit 必须接上远程父节点才不丢历史
 tags: [github, git, api, 推送]
 created: 2026-11-16

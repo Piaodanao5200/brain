@@ -3,6 +3,9 @@ library/store.db
 library/store.db-journal
 library/store.db-wal
 library/store.db-shm
+# 手工备份文件不入仓（2026-11-24 归档时发现 3 个 .bak 未忽略）
+library/*.bak-*
+library/bin/*.bak*
 library/reading/
 memory/reading/
 memory/hooks/_hook.log

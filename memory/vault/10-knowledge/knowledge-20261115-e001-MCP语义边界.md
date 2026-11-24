@@ -2,6 +2,7 @@
 id: knowledge-20261115-e001
 type: knowledge
 scope: global
+layer: L1
 title: MCP 统一传输但不统一语义，必须选一个唯一真源
 tags: [mcp, 协议, 互通]
 created: 2026-11-15

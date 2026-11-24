@@ -2,10 +2,11 @@
 id: knowledge-20261117-aafa
 type: knowledge
 scope: project
+layer: L1
 title: cangjie 蒸馏与知识库的配合流程：三层分工、攒够判据、反哺走 update
 tags: [蒸馏, cangjie, 知识库, skill, 配合流程, 反哺]
 created: 2026-11-17
-updated: 2026-11-17
+updated: 2026-11-18
 valid_from: 2026-11-17
 supersedes: []
 status: active
@@ -22,3 +23,7 @@ cangjie-skill 的产出是可执行方法论（skill），不是知识库条目�
 反哺（知识库反哺 skill）的攒够判据——不是条数而是能否归纳规律，满足其一即可：①同一偏差重复出现（如按 skill 做 5 个方案 3 次在同一步不符实际）；②同类 pitfall ≥3 条且性质相同；③有可当标准答案的成功案例。攒的本质是对错样本：输入（任务）+ skill 建议 X + 实际做了 Y + 结果 Z。因此 pitfall 条目要按三段写，别只写「XX 不行」。
 
 反哺路径：先走 B——攒够后让 agent 走 cangjie 的 update 流程，捞库中案例修订能力卡（步骤/边界/评测段），改动进 skills 仓库 git 可回退。darwin-skill 尚未安装，cangjie 产物评测用例格式与 darwin 兼容，以后想自动化再装即插即用。
+
+增量升级（2026-11-18 补）：命令模式 `cangjie.py update --pack "<pack>" --add "新文件.md"`，需已有 pack 基线。冲突必须人工定性为 correction / contradiction / near_duplicate 三类之一，不许静默综合。
+
+视频/帖子的分流（2026-11-18 补）：看到相关视频或帖子，先按 V1/V2/V3 判断蒸馏价值；不值得的直接摘取要点转 md 入知识库（带出处）；值得的攒候选池，待基线重建后走 update 升级。
