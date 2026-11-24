@@ -78,7 +78,7 @@ for (const e of entries) {
 
   // 9. 类型与目录是否一致
   const expect = TYPE_DIR[e.type];
-  if (expect && !e.rel.startsWith(expect) && e.type !== "index") {
+  if (expect && !e.rel.startsWith(expect) && e.type !== "index" && !e.rel.startsWith("90-archive")) {
     warns.push(`${where}: 类型 ${e.type} 建议放在 ${expect}/ 下`);
   }
 }

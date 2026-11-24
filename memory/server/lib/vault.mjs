@@ -96,7 +96,7 @@ function yamlVal(v) {
 }
 
 export function stringifyFrontmatter(fm, body) {
-  const order = ["id", "type", "scope", "title", "tags", "created", "updated",
+  const order = ["id", "type", "scope", "layer", "title", "tags", "created", "updated",
     "valid_from", "supersedes", "status", "confidence", "source"];
   const keys = [...order.filter((k) => fm[k] !== undefined),
     ...Object.keys(fm).filter((k) => !order.includes(k))];
@@ -141,6 +141,7 @@ export function scan() {
       id: fm.id || rel.replace(/\.md$/, ""),
       type: fm.type || guessType(rel),
       scope: fm.scope || "project",
+      layer: fm.layer || "L1",
       title: fm.title || firstHeading(body) || path.basename(file, ".md"),
       tags: Array.isArray(fm.tags) ? fm.tags : (fm.tags ? [fm.tags] : []),
       aliases: Array.isArray(fm.aliases) ? fm.aliases : (fm.aliases ? String(fm.aliases).split(/[,，\s]+/).filter(Boolean) : []),
@@ -385,6 +386,7 @@ export function writeEntry(input = {}) {
     id,
     type,
     scope: input.scope || "project",
+    layer: input.layer || "L1",
     title,
     tags,
     aliases,

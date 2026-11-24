@@ -45,7 +45,7 @@ function charGauge() {
   const USER_DIR = process.env.WB_USER_DIR || "D:/WorkBuddy/user-48a30fac-1fde-4b69-a7bb-ddcac39c873c-personal";
   const rows = [
     ["用户级 MEMORY.md", path.join(USER_DIR, "MEMORY.md"), 2500],
-    ["memory-technical.md", path.join(USER_DIR, "memory-technical.md"), 3000],
+    ["L2 索引 memory-technical.md", "D:/collaborative project/brain/memory/l2/memory-technical.md", 3000],
     ["工作区 MEMORY.md", WB_MEMORY, 3000],
   ];
   const out = [];
@@ -71,7 +71,7 @@ function charGauge() {
  * 为什么需要：WorkBuddy 桌面版不执行 settings.json 的 shell hook（2026-11-16 实测），
  * 会话启动靠 MEMORY.md 自动注入。索引不跟着同步，新会话就看不到新条目。
  */
-const WB_MEMORY = process.env.WB_MEMORY || "D:/WorkBuddy/.workbuddy/memory/MEMORY.md";
+const WB_MEMORY = process.env.WB_MEMORY || "D:/WorkBuddy/user-48a30fac-1fde-4b69-a7bb-ddcac39c873c-personal/MEMORY.md";
 const MARK_B = "<!-- KB-INDEX:BEGIN -->";
 const MARK_E = "<!-- KB-INDEX:END -->";
 
@@ -97,15 +97,16 @@ function syncMemoryIndex({ quiet = false } = {}) {
     const it = raw.match(/^-\s+`([^`]+)`\s+(.+)$/);
     if (it && cur) {
       const short = it[1].replace(/^(knowledge|decision|fact|pitfall|todo|note)-\d{8}-/, "");
-      let title = it[2].split(" · #")[0].trim();
-      if (title.length > 40) title = title.slice(0, 39) + "…";
-      cur.items.push(`- \`${short}\` ${title}`);
+      let title = it[2].split(" · ")[0].trim();
+      if (title.length > 6) title = title.slice(0, 5) + "…";
+      cur.items.push(`${short} ${title}`);
     }
   }
 
+  // 极清单行：每组一行、条目用 · 分隔，控制体积以塞进 L3（用户级 MEMORY.md）
   const body = groups.filter((g) => g.items.length)
-    .map((g) => `**${g.name}**\n${g.items.join("\n")}`)
-    .join("\n\n");
+    .map((g) => `${g.name} ${g.items.join(" · ")}`)
+    .join("\n");
   const next = mem.slice(0, a + MARK_B.length) + "\n" + body + "\n" + mem.slice(b);
   const count = groups.reduce((n, g) => n + g.items.length, 0);
 
