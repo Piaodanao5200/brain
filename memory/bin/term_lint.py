@@ -20,6 +20,8 @@ PARAM = re.compile(r"--[A-Za-z][A-Za-z0-9_-]*")
 EXT = re.compile(r"\.(?:md|json|py|mjs|js|ts|txt|yaml|yml|xlsx|docx|pdf|sql|jsonl|toml)\b")
 ENG = re.compile(r"[A-Za-z][A-Za-z0-9_.+-]{2,}")
 URLISH = re.compile(r"https?://\S+")
+PATHISH = re.compile(r"(?:[A-Za-z]:\\[^\s`\"'）)]*|\\\\[^\s`\"'）)]*)")
+HASHISH = re.compile(r"[0-9a-fA-F]{7,40}")
 FENCE = re.compile(r"```")
 WINDOW = 12
 
@@ -30,8 +32,14 @@ SOFT_SKIP = {"the", "and", "for", "with", "www", "com", "png", "jpg"}
 def mask(text: str) -> str:
     """把 URL、代码块、路径替换成等长空格，保持行号与偏移不变。"""
     out = text
-    for m in URLISH.finditer(text):
-        out = out[: m.start()] + " " * (m.end() - m.start()) + out[m.end():]
+    for rx in (URLISH, PATHISH):
+        for m in rx.finditer(text):
+            out = out[: m.start()] + " " * (m.end() - m.start()) + out[m.end():]
+    # 反引号里的路径（可能含空格）整段屏蔽
+    for m in re.finditer(r"`[^`\n]*`", out):
+        span = m.group()
+        if "\\" in span or ":/" in span:
+            out = out[: m.start()] + " " * len(span) + out[m.end():]
     # 代码块（成对 ``` 之间）
     fence_positions = [m.start() for m in FENCE.finditer(out)]
     for i in range(0, len(fence_positions) - 1, 2):
@@ -81,6 +89,14 @@ def check(text: str):
                 if w.lower().lstrip("-") in SOFT_SKIP:
                     continue
                 if "\\" in w or "/" in w:  # 路径
+                    continue
+                # 提交号（7 位以上十六进制）不算术语
+                left, right = s, e
+                while left > 0 and line[left - 1].isalnum():
+                    left -= 1
+                while right < len(line) and line[right].isalnum():
+                    right += 1
+                if HASHISH.fullmatch(line[left:right]):
                     continue
                 if w in explained or w in flagged:
                     continue
