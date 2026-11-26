@@ -125,7 +125,35 @@ for (const [name, p] of injections) {
 }
 add("MANUAL", "豆包 注入", "无注入文件，靠平台偏好指名去读；只能依赖回复闸兜底");
 
-// 6. 索引新鲜度
+// 7. 副本一致性（平台偏好是副本，会旧）
+const PREF = path.join(ROOT, "memory", "l2", "platform-prefs.md");
+let coreCount = null;
+if (!fs.existsSync(PREF)) {
+  add("FAIL", "偏好标准文本", "缺 memory/l2/platform-prefs.md（副本没有比对基准）");
+} else {
+  const t = fs.readFileSync(PREF, "utf8");
+  coreCount = (t.match(/^\d+\.\s+/gm) || []).length;
+  coreCount >= 5
+    ? add("PASS", "偏好标准文本", "platform-prefs.md 存在，核心 " + coreCount + " 条")
+    : add("FAIL", "偏好标准文本", "platform-prefs.md 核心条数只有 " + coreCount + "，应 ≥5");
+}
+const wbMemo = injections.find(([n]) => n === "WorkBuddy")[1];
+if (fs.existsSync(wbMemo)) {
+  const t = fs.readFileSync(wbMemo, "utf8");
+  const anchors = [
+    ["真源路径", "collaborative project\\brain\\AGENTS.md"],
+    ["唯一真源", "唯一真源"],
+    ["启动必读", "启动必读"],
+    ["写入授权", "写入授权"],
+  ];
+  const miss = anchors.filter(([, s]) => !t.includes(s)).map(([k]) => k);
+  miss.length
+    ? add("FAIL", "副本一致性·WorkBuddy", "副本缺锚点：" + miss.join("、") + " → 按 platform-prefs.md 补进 MEMORY.md")
+    : add("PASS", "副本一致性·WorkBuddy", "4 个锚点齐全（真源路径 / 唯一真源 / 启动必读 / 写入授权）");
+}
+add("MANUAL", "副本一致性·豆包", "偏好写在平台设置里，读不到文件；气泡外请人工比对 platform-prefs.md 的 " + (coreCount ?? "若干") + " 条核心句");
+
+// 8. 索引新鲜度
 const indexFile = path.join(VAULT, "00-index", "INDEX.md");
 try {
   const vaultFiles = walk(VAULT).filter((f) => path.basename(f) !== "INDEX.md" && path.basename(f) !== "RULES.md");
