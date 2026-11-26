@@ -125,6 +125,19 @@ for (const [name, p] of injections) {
 }
 add("MANUAL", "豆包 注入", "无注入文件，靠平台偏好指名去读；只能依赖回复闸兜底");
 
+// 5b. 副本里不许抄命令（抄了就必然和真源漂移）
+const CMD_HINTS = ["reply_gate.py", "term_lint.py", "kb_hint.mjs", "--skip-memory"];
+const drift = [];
+for (const [name, p] of injections) {
+  if (!fs.existsSync(p)) continue;
+  const t = fs.readFileSync(p, "utf8");
+  const hit = CMD_HINTS.filter((s) => t.includes(s));
+  if (hit.length) drift.push(name + "（" + hit.join("、") + "）");
+}
+drift.length
+  ? add("WARN", "副本无命令漂移", "这些副本抄了命令，会随真源变更而失效：" + drift.join("；") + " → 改成只写“读 brain/AGENTS.md 第 8/9 条”")
+  : add("PASS", "副本无命令漂移", "6 个注入点都只放指针，没抄具体命令（命令只住真源，改真源即全体生效）");
+
 // 7. 副本一致性（平台偏好是副本，会旧）
 const PREF = path.join(ROOT, "memory", "l2", "platform-prefs.md");
 let coreCount = null;
