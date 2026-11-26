@@ -166,6 +166,31 @@ if (fs.existsSync(wbMemo)) {
 }
 add("MANUAL", "副本一致性·豆包", "偏好写在平台设置里，读不到文件；气泡外请人工比对 platform-prefs.md 的 " + (coreCount ?? "若干") + " 条核心句");
 
+// 7b. 偏好同步·豆包（用快照代平台侧，自动比对核心六条是否还在）
+const SNAP = path.join(ROOT, "memory", "l2", "doubao-prefs-snapshot.md");
+if (!fs.existsSync(PREF)) {
+  // 上面已报 FAIL，这里不重复
+} else if (!fs.existsSync(SNAP)) {
+  add("WARN", "偏好同步·豆包", "缺 memory/l2/doubao-prefs-snapshot.md（平台侧没有可比的快照）→ 照抄平台偏好列表进该文件");
+} else {
+  const snap = fs.readFileSync(SNAP, "utf8");
+  const anchors = [
+    ["第1条·读真源", "AGENTS.md"],
+    ["第2条·术语释义", "即"],
+    ["第3条·写入授权", "征得用户同意"],
+    ["第4条·三类源", "三类源"],
+    ["第5条·唯一真源", "唯一真源"],
+    ["第6条·产出路径", "豆包产出"],
+  ];
+  const miss = anchors.filter(([, s]) => !snap.includes(s)).map(([k]) => k);
+  const declare = Number((snap.match(/条数：\s*(\d+)/) || [])[1] || 0);
+  if (miss.length) {
+    add("WARN", "偏好同步·豆包", "快照缺核心句：" + miss.join("、") + " → 平台偏好可能缺条，去平台补齐后重抄快照");
+  } else {
+    add("PASS", "偏好同步·豆包", "快照命中 6/6 条核心句" + (declare ? "，声明条数 " + declare : ""));
+  }
+}
+
 // 8. 索引新鲜度
 const indexFile = path.join(VAULT, "00-index", "INDEX.md");
 try {
@@ -194,8 +219,8 @@ try {
     if (m && m[1].trim().replace(/["']/g, "") === "superseded") superseded++;
   }
   superseded > 20
-    ? add("WARN", "作废堆积", "作废条目已 " + superseded + " 条（超 20）→ 人工决定是否移入 90-archive，不物理删除")
-    : add("PASS", "作废堆积", "作废条目 " + superseded + " 条，未超 20 条上限");
+    ? add("WARN", "作废堆积", "作废条目已 " + superseded + " 条（超 20）→ 跑 node memory/bin/kb_archive.mjs 看满 90 天的候选，--apply 移入 90-archive")
+    : add("PASS", "作废堆积", "作废条目 " + superseded + " 条，未超 20 条上限（满 90 天的可跑 kb_archive.mjs 移归档）");
 } catch (e) {
   add("WARN", "作废堆积", "统计失败：" + String(e.message).slice(0, 80));
 }
