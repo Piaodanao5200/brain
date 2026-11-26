@@ -18,8 +18,13 @@ import sys
 from pathlib import Path
 
 PARAM = re.compile(r"--[A-Za-z][A-Za-z0-9_-]*")
-EXT = re.compile(r"\.(?:md|json|py|mjs|js|ts|txt|yaml|yml|xlsx|docx|pdf|sql|jsonl|toml)\b")
+EXT = re.compile(
+    r"\.(?:md|json|py|mjs|js|ts|txt|yaml|yml|xlsx|docx|pdf|sql|jsonl|toml"
+    r"|exe|cmd|sh|bat|ps1|csv|tsv|html|htm|xml|log|ipynb|svg|zip|rar|db|sqlite|lock)\b"
+)
 ENG = re.compile(r"[A-Za-z][A-Za-z0-9_.+-]{2,}")
+ACR = re.compile(r"(?<![A-Za-z0-9])[A-Z]{2}(?![A-Za-z0-9])")   # 两个字母的缩写：AI、KB、DB
+LVL = re.compile(r"(?<![A-Za-z0-9])[A-Z][0-9](?![A-Za-z0-9])")  # 字母加序号：L1、L2
 URLISH = re.compile(r"https?://\S+")
 PATHISH = re.compile(r"(?:[A-Za-z]:\\[^\s`\"'）)]*|\\\\[^\s`\"'）)]*)")
 HASHISH = re.compile(r"[0-9a-fA-F]{7,40}")
@@ -28,6 +33,8 @@ WINDOW = 12
 
 # 常见但往往无需解释的词（仍建议保留，避免噪音过大）
 SOFT_SKIP = {"the", "and", "for", "with", "www", "com", "png", "jpg"}
+# 两字母缩写里无需解释的例外（只放真正的应答词，别往里塞技术缩写）
+ACR_SKIP = {"OK"}
 
 
 ID_ENTRY = re.compile(r"(?:fact|knowledge|decision|pitfall|todo|session)-\d{8}-[0-9a-f]{4,}")
@@ -104,8 +111,8 @@ def check(text: str):
             lineno = start_line + offset
             mline = mlines[lineno - 1] if lineno - 1 < len(mlines) else line
             spans = [(m.start(), m.end(), m.group())
-                     for rx in (PARAM, EXT, ENG) for m in rx.finditer(mline)]
-            spans.sort()
+                     for rx in (PARAM, EXT, ENG, ACR, LVL) for m in rx.finditer(mline)]
+            spans.sort(key=lambda x: (x[0], -(x[1] - x[0])))
             owned = set()
             for s, e, word in spans:
                 if any(s < oe and e > os_ for os_, oe in owned):
@@ -113,6 +120,8 @@ def check(text: str):
                 owned.add((s, e))
                 w = word.rstrip(".,;:，。；）)】”\"")
                 if w.lower().lstrip("-") in SOFT_SKIP:
+                    continue
+                if w in ACR_SKIP:
                     continue
                 if "\\" in w or "/" in w:  # 路径
                     continue
