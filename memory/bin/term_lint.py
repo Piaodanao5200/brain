@@ -35,11 +35,9 @@ def mask(text: str) -> str:
     for rx in (URLISH, PATHISH):
         for m in rx.finditer(text):
             out = out[: m.start()] + " " * (m.end() - m.start()) + out[m.end():]
-    # 反引号里的路径（可能含空格）整段屏蔽
+    # 行内代码整段屏蔽：里面通常是命令、参数、路径、文件名，不该要求写释义
     for m in re.finditer(r"`[^`\n]*`", out):
-        span = m.group()
-        if "\\" in span or ":/" in span:
-            out = out[: m.start()] + " " * len(span) + out[m.end():]
+        out = out[: m.start()] + " " * (m.end() - m.start()) + out[m.end():]
     # 代码块（成对 ``` 之间）
     fence_positions = [m.start() for m in FENCE.finditer(out)]
     for i in range(0, len(fence_positions) - 1, 2):
