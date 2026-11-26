@@ -60,24 +60,30 @@ def _opaque(code: str) -> bool:
     return False
 
 
+def _blank(seg: str) -> str:
+    """等长替换成空格，但保留换行——否则行号会错位。"""
+    return "".join("\n" if c == "\n" else " " for c in seg)
+
+
 def mask(text: str) -> str:
     """把 URL、代码块、路径替换成等长空格，保持行号与偏移不变。"""
     out = text
     for rx in (URLISH, PATHISH):
         for m in rx.finditer(text):
-            out = out[: m.start()] + " " * (m.end() - m.start()) + out[m.end():]
+            out = out[: m.start()] + _blank(out[m.start(): m.end()]) + out[m.end():]
+    # 先屏蔽成对代码块（含 ``` 围栏行本身），再处理行内代码——
+    # 顺序不能反：先把 ```bash 里的前两个反引号当行内代码抹掉，围栏就配不成对了
+    fence_positions = [m.start() for m in FENCE.finditer(out)]
+    for i in range(0, len(fence_positions) - 1, 2):
+        s, e = fence_positions[i], fence_positions[i + 1] + 3
+        out = out[:s] + _blank(out[s:e]) + out[e:]
     # 行内代码只豁免"操作性内容"：路径、参数、命令行、文件名、条目编号、URL
     # 工具名/英文缩写（如 reply_gate、kb_hint、MCP）不豁免——包反引号不等于解释过
     for m in re.finditer(r"`[^`\n]*`", out):
         inner = m.group()[1:-1].strip()
         if not _opaque(inner):
             continue  # 保留原文，交给后面的术语检查
-        out = out[: m.start()] + " " * (m.end() - m.start()) + out[m.end():]
-    # 代码块（成对 ``` 之间）
-    fence_positions = [m.start() for m in FENCE.finditer(out)]
-    for i in range(0, len(fence_positions) - 1, 2):
-        s, e = fence_positions[i], fence_positions[i + 1]
-        out = out[:s] + " " * (e - s) + out[e:]
+        out = out[: m.start()] + _blank(out[m.start(): m.end()]) + out[m.end():]
     return out
 
 
@@ -124,6 +130,10 @@ def check(text: str):
                 if w in ACR_SKIP:
                     continue
                 if "\\" in w or "/" in w:  # 路径
+                    continue
+                if ID_ENTRY.fullmatch(w):  # 记忆条目编号（正文里也不会逐条解释）
+                    continue
+                if EXT.search(w) and " " not in w:  # 文件名（AGENTS.md、kb_hint.mjs 这类）
                     continue
                 # 提交号（7 位以上十六进制）不算术语
                 left, right = s, e

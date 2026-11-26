@@ -182,6 +182,45 @@ try {
   add("WARN", "索引新鲜度", "检查失败：" + String(e.message).slice(0, 80));
 }
 
+// 9. 作废条目堆积（superseded 只标记不删除，攒多了要人工决定移归档）
+try {
+  const files = walk(VAULT).filter(
+    (f) => !path.relative(VAULT, f).startsWith("90-archive") && !path.basename(f).startsWith("_")
+  );
+  let superseded = 0;
+  for (const f of files) {
+    const head = fs.readFileSync(f, "utf8");
+    const m = head.match(/^status:\s*(.+)$/m);
+    if (m && m[1].trim().replace(/["']/g, "") === "superseded") superseded++;
+  }
+  superseded > 20
+    ? add("WARN", "作废堆积", "作废条目已 " + superseded + " 条（超 20）→ 人工决定是否移入 90-archive，不物理删除")
+    : add("PASS", "作废堆积", "作废条目 " + superseded + " 条，未超 20 条上限");
+} catch (e) {
+  add("WARN", "作废堆积", "统计失败：" + String(e.message).slice(0, 80));
+}
+
+// 10. 注入副本里的易变细节（指针只该放路径和规则条号，放了数字/条数/版本就会旧）
+try {
+  const VOLATILE = [
+    /\d+\s*项体检/,
+    /\d+\s*个工具/,
+    /\d+\s*条(?:偏好|核心|规则|检查)/,
+    /版本\s*v?\d+\.\d+/i,
+  ];
+  const stale = [];
+  for (const [name, p] of injections) {
+    if (!fs.existsSync(p)) continue;
+    const body = fs.readFileSync(p, "utf8");
+    if (VOLATILE.some((re) => re.test(body))) stale.push(name);
+  }
+  stale.length
+    ? add("WARN", "副本易变细节", "这些注入文件写了条数/版本这类会变的数字：" + stale.join("、") + " → 改成只写路径和第几条")
+    : add("PASS", "副本易变细节", "注入文件都只放路径与条号，没有会随真源变更而失效的数字");
+} catch (e) {
+  add("WARN", "副本易变细节", "检查失败：" + String(e.message).slice(0, 80));
+}
+
 if (jsonOut) {
   console.log(JSON.stringify(rows, null, 2));
 } else {

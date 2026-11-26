@@ -134,9 +134,9 @@ if (jsonOut) {
   } else {
     console.log("按记忆：命中 " + entries.length + " 条");
     for (const e of entries) {
-      console.log("- [" + e.type + "] " + e.title);
+      console.log("- [" + e.type + "] " + e.id + " | " + e.title);
       console.log("  " + e.summary);
     }
-    console.log("够就 node memory/bin/kb.mjs read <id> 读 1–2 条全文；不够就换词再 hint。");
+    console.log("够就 node memory/bin/kb.mjs read <上面那串完整编号> 读 1–2 条全文；不够就换词再 hint。");
   }
 }
