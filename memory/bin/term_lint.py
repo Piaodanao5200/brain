@@ -5,7 +5,8 @@
 凡专业名词、英文缩写、技术词（token、JSON、API、`--full` 等），必须紧跟「即……」大白话释义。
 
 判定：词后 12 个字内没有「即」，且同段之前未解释过 → 判漏。
-豁免：代码块内、URL 内、纯路径内不检查。
+豁免：代码块内、URL 内、纯路径/命令行/参数/文件名内不检查。
+行内代码不再整段豁免：工具名、英文缩写即使包了反引号，首次出现仍须带「即……」释义。
 退出码：0 = 通过；1 = 有命中。
 """
 from __future__ import annotations
@@ -29,14 +30,41 @@ WINDOW = 12
 SOFT_SKIP = {"the", "and", "for", "with", "www", "com", "png", "jpg"}
 
 
+ID_ENTRY = re.compile(r"(?:fact|knowledge|decision|pitfall|todo|session)-\d{8}-[0-9a-f]{4,}")
+
+
+def _opaque(code: str) -> bool:
+    """行内代码是否属于"操作性内容"：路径 / 参数 / 命令行 / 文件名 / 条目编号 / URL。"""
+    s = code.strip()
+    if not s:
+        return True
+    if " " in s or "\t" in s:        # 命令行（带参数）
+        return True
+    if "/" in s or "\\" in s:       # 路径
+        return True
+    if s.startswith("-"):            # 命令行参数
+        return True
+    if s.startswith("http://") or s.startswith("https://"):
+        return True
+    if EXT.search(s):                # 文件名 / 扩展名
+        return True
+    if ID_ENTRY.fullmatch(s):        # 记忆条目编号
+        return True
+    return False
+
+
 def mask(text: str) -> str:
     """把 URL、代码块、路径替换成等长空格，保持行号与偏移不变。"""
     out = text
     for rx in (URLISH, PATHISH):
         for m in rx.finditer(text):
             out = out[: m.start()] + " " * (m.end() - m.start()) + out[m.end():]
-    # 行内代码整段屏蔽：里面通常是命令、参数、路径、文件名，不该要求写释义
+    # 行内代码只豁免"操作性内容"：路径、参数、命令行、文件名、条目编号、URL
+    # 工具名/英文缩写（如 reply_gate、kb_hint、MCP）不豁免——包反引号不等于解释过
     for m in re.finditer(r"`[^`\n]*`", out):
+        inner = m.group()[1:-1].strip()
+        if not _opaque(inner):
+            continue  # 保留原文，交给后面的术语检查
         out = out[: m.start()] + " " * (m.end() - m.start()) + out[m.end():]
     # 代码块（成对 ``` 之间）
     fence_positions = [m.start() for m in FENCE.finditer(out)]
